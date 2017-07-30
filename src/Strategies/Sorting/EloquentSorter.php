@@ -1,7 +1,7 @@
 <?php
 namespace Czim\DataStore\Strategies\Sorting;
 
-use App\Enums\SortStrategyEnum;
+use Czim\DataStore\Enums\SortStrategyEnum;
 use Illuminate\Database\Eloquent\Builder;
 use UnexpectedValueException;
 

@@ -2,7 +2,8 @@
 
 use Czim\DataStore\Enums\FilterStrategyEnum;
 use Czim\DataStore\Enums\SortStrategyEnum;
-use Czim\DataStore\Strategies;
+use Czim\DataStore\Stores\Filtering\Strategies as FilterStrategies;
+use Czim\DataStore\Stores\Sorting\Strategies as SortStrategies;
 
 return [
 
@@ -17,6 +18,27 @@ return [
 
     'drivers' => [
 
+        'datastore' => [
+            'default' => 'model',
+
+            'drivers' => [
+
+                'model' => [
+                    // Datastore class name
+                    'datastore' => Czim\DataStore\Stores\EloquentRepositoryDataStore::class,
+                    // Driver key for resource adapter (null for default)
+                    'adapter'   => null,
+                    // Driver key for database (null for default)
+                    'database'  => null,
+                ],
+
+                'repository' => [
+                    'datastore' => Czim\DataStore\Stores\EloquentRepositoryDataStore::class,
+                    'adapter'   => null,
+                ],
+            ],
+        ],
+
         // The resource adaptor layer
         'adapter' => [
             'default' => 'jsonapi',
@@ -29,23 +51,57 @@ return [
             ],
         ],
 
-        'database' => [
+        'strategies' => [
             'default' => 'mysql',
 
-            'drivers' => [
+            'filtering' => [
 
-                'mysql' => [
-                    'filter' => Strategies\Filter\EloquentFilter::class,
-                    'sorter' => Strategies\Sorting\EloquentSorter::class,
+                'mysql'   => [
+                    'default' => FilterStrategies\LikeStrategy::class,
+                    'map'     => [
+                        FilterStrategyEnum::EXACT                  => FilterStrategies\ExactStrategy::class,
+                        FilterStrategyEnum::EXACT_CASE_INSENSITIVE => FilterStrategies\ExactStrategy::class,
+                        FilterStrategyEnum::EXACT_COMMA_SEPARATED  => FilterStrategies\ExactCommaSeparatedStrategy::class,
+                        FilterStrategyEnum::LIKE                   => FilterStrategies\LikeStrategy::class,
+                        FilterStrategyEnum::LIKE_CASE_INSENSITIVE  => FilterStrategies\LikeStrategy::class,
+                    ],
                 ],
 
                 'postgres' => [
-                    'filter' => Strategies\Filter\EloquentPostgresFilter::class,
-                    'sorter' => Strategies\Sorting\EloquentPostgresSorter::class,
+                    'default' => FilterStrategies\Postgres\LikeCaseInsensitiveStrategy::class,
+                    'map'     => [
+                        FilterStrategyEnum::EXACT                  => FilterStrategies\ExactStrategy::class,
+                        FilterStrategyEnum::EXACT_CASE_INSENSITIVE => FilterStrategies\Postgres\ExactCaseInsensitiveStrategy::class,
+                        FilterStrategyEnum::EXACT_COMMA_SEPARATED  => FilterStrategies\ExactCommaSeparatedStrategy::class,
+                        FilterStrategyEnum::LIKE                   => FilterStrategies\LikeStrategy::class,
+                        FilterStrategyEnum::LIKE_CASE_INSENSITIVE  => FilterStrategies\Postgres\LikeCaseInsensitiveStrategy::class,
+                    ],
                 ],
 
                 'sqlite' => [
+                    'default' => FilterStrategies\LikeStrategy::class,
+                    'map'     => [
+                        FilterStrategyEnum::EXACT                  => FilterStrategies\ExactStrategy::class,
+                        FilterStrategyEnum::EXACT_CASE_INSENSITIVE => FilterStrategies\ExactStrategy::class,
+                        FilterStrategyEnum::EXACT_COMMA_SEPARATED  => FilterStrategies\ExactCommaSeparatedStrategy::class,
+                        FilterStrategyEnum::LIKE                   => FilterStrategies\LikeStrategy::class,
+                        FilterStrategyEnum::LIKE_CASE_INSENSITIVE  => FilterStrategies\LikeStrategy::class,
+                    ],
                 ],
+            ],
+
+            'sorting' => [
+
+                'mysql'   => [
+                    'handler' => \Czim\DataStore\Stores\Sorting\EloquentSorter::class,
+                    'map'     => [
+                        FilterStrategyEnum::EXACT                  => FilterStrategies\ExactStrategy::class,
+                        FilterStrategyEnum::EXACT_CASE_INSENSITIVE => FilterStrategies\ExactStrategy::class,
+                        FilterStrategyEnum::LIKE                   => FilterStrategies\LikeStrategy::class,
+                        FilterStrategyEnum::LIKE_CASE_INSENSITIVE  => FilterStrategies\LikeStrategy::class,
+                    ],
+                ],
+
             ],
         ],
 

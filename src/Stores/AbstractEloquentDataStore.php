@@ -1,25 +1,20 @@
 <?php
 namespace Czim\DataStore\Stores;
 
-use App\Enums\FilterStrategyEnum;
-use App\Enums\SortStrategyEnum;
-use Czim\DataObject\Contracts\DataObjectInterface;
 use Czim\DataStore\Contracts\Context\ContextInterface;
-use Czim\DataStore\Contracts\Stores\DataStoreInterface;
 use Czim\DataStore\Contracts\Resource\ResourceAdapterInterface;
-use Czim\DataStore\Strategies\Filter\EloquentFilter;
-use Czim\DataStore\Strategies\Sorting\EloquentSorter;
-use Czim\Repository\Contracts\BaseRepositoryInterface;
-use Illuminate\Database\Eloquent\Builder;
+use Czim\DataStore\Contracts\Stores\DataStoreInterface;
+use Czim\DataStore\Contracts\Stores\Filtering\FilterStrategyFactoryInterface;
+use Czim\DataStore\Contracts\Stores\Sorting\SortStrategyFactoryInterface;
+use Czim\DataStore\Enums\FilterStrategyEnum;
+use Czim\DataStore\Enums\SortStrategyEnum;
+use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
+use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Query\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 
-class EloquentDataStore implements DataStoreInterface
+abstract class AbstractEloquentDataStore implements DataStoreInterface
 {
-
-    /**
-     * @var BaseRepositoryInterface
-     */
-    protected $repository;
 
     /**
      * @var ResourceAdapterInterface
@@ -27,20 +22,28 @@ class EloquentDataStore implements DataStoreInterface
     protected $resourceAdapter;
 
     /**
-     * Strategies to use for JSON-API sort names (without '-' prefix).
-     *
-     * @var string[]
+     * @var string
      */
-    protected $sortStrategies = [];
+    protected $modelClass;
+
+    /**
+     * @var string
+     */
+    protected $strategyDriver = 'mysql';
+
+    /**
+     * The includes to apply for the next retrieval
+     *
+     * @var array
+     */
+    protected $includes = [];
 
 
     /**
-     * @param BaseRepositoryInterface  $repository
      * @param ResourceAdapterInterface $resourceAdapter
      */
-    public function __construct(BaseRepositoryInterface $repository, ResourceAdapterInterface $resourceAdapter)
+    public function __construct(ResourceAdapterInterface $resourceAdapter)
     {
-        $this->repository      = $repository;
         $this->resourceAdapter = $resourceAdapter;
     }
 
@@ -53,9 +56,9 @@ class EloquentDataStore implements DataStoreInterface
      */
     public function getById($id, $includes = [])
     {
-        $this->applyIncludes($includes);
+        $this->queueIncludes($includes);
 
-        return $this->repository->find($id);
+        return $this->retrieveById($id);
     }
 
     /**
@@ -67,9 +70,9 @@ class EloquentDataStore implements DataStoreInterface
      */
     public function getManyById(array $ids, $includes = [])
     {
-        $this->applyIncludes($includes);
+        $this->queueIncludes($includes);
 
-        return $this->repository->query()->whereIn('id', $ids);
+        return $this->retrieveManyById($ids);
     }
 
     /**
@@ -81,9 +84,9 @@ class EloquentDataStore implements DataStoreInterface
      */
     public function getByContext(ContextInterface $context, $includes = [])
     {
-        $this->applyIncludes($includes);
+        $this->queueIncludes($includes);
 
-        $query = $this->repository->query();
+        $query = $this->retrieveQuery();
 
         $query = $this->applyFilters($query, $context->filters());
         $query = $this->applySorting($query, $context->sorting());
@@ -118,18 +121,6 @@ class EloquentDataStore implements DataStoreInterface
             $filters = $default;
         }
 
-        // Filter by IDs
-        if (array_has($filters, 'ids')) {
-
-            $ids = array_get($filters, 'ids');
-
-            if ( ! is_array($ids)) {
-                $ids = array_map('trim', explode(',', $ids));
-            }
-
-            $query->whereIn('id', $ids);
-        }
-
         // Special filters? Only consider available in resource
         $available = $this->resourceAdapter->availableFilterKeys();
 
@@ -138,7 +129,7 @@ class EloquentDataStore implements DataStoreInterface
         }, ARRAY_FILTER_USE_KEY);
 
         foreach ($filters as $key => $value) {
-            $this->applyFilterValue($query, $key, $value);
+            $this->applyFilterValue($query, $this->determineFilterStrategyForKey($key), $key, $value);
         }
 
         return $query;
@@ -148,18 +139,18 @@ class EloquentDataStore implements DataStoreInterface
      * Applies a single filter value to a query.
      *
      * @param Builder $query
+     * @param string  $strategy
      * @param string  $key
      * @param mixed   $value
      * @return Builder
      */
-    protected function applyFilterValue($query, $key, $value)
+    protected function applyFilterValue($query, $strategy, $key, $value)
     {
         $attribute = $this->resourceAdapter->dataKeyForAttribute($key);
-        $strategy  = $this->determineFilterStrategyForKey($attribute);
 
-        $filter = new EloquentFilter($query);
+        $filter = $this->makeFilterStrategyInstance($strategy);
 
-        return $filter->apply($strategy, $attribute, $value);
+        return $filter->apply($query, $attribute, $value);
     }
 
     /**
@@ -171,7 +162,7 @@ class EloquentDataStore implements DataStoreInterface
     protected function determineFilterStrategyForKey($key)
     {
         return config(
-            'datastore.filter.strategies.' . $this->repository->model(),
+            "datastore.filter.strategies.{$this->modelClass}",
             config(
                 "datastore.filter.default-strategies.{$key}",
                 config('datastore.filter.default', FilterStrategyEnum::LIKE)
@@ -224,9 +215,9 @@ class EloquentDataStore implements DataStoreInterface
     {
         $strategy  = $this->determineSortStrategyForAttribute($attribute);
 
-        $sorter = new EloquentSorter($query);
+        $sorter = $this->makeSortStrategyInstance($strategy);
 
-        return $sorter->apply($strategy, $attribute, $reverse);
+        return $sorter->apply($query, $attribute, (bool) $reverse);
     }
 
     /**
@@ -238,7 +229,7 @@ class EloquentDataStore implements DataStoreInterface
     protected function determineSortStrategyForAttribute($attribute)
     {
         return config(
-            'datastore.sort.strategies.' . $this->repository->model(),
+            "datastore.sort.strategies.{$this->modelClass}",
             config(
                 "datastore.sort.default-strategies.{$attribute}",
                 config('datastore.sort.default', SortStrategyEnum::ALPHABETIC)
@@ -247,52 +238,92 @@ class EloquentDataStore implements DataStoreInterface
     }
 
     /**
+     * Prepares datastore to eager load the given includes.
+     *
      * @param array $includes
      * @return $this
      */
-    protected function applyIncludes(array $includes)
+    protected function queueIncludes(array $includes)
     {
-        // todo: consider sensible recursive logic with per-resource nested handling
+        $this->includes = $includes;
+
+        return $this;
+    }
+
+    /**
+     * Clears currently queued includes.
+     *
+     * @return $this
+     */
+    protected function clearIncludes()
+    {
+        $this->includes = [];
+
         return $this;
     }
 
 
     // ------------------------------------------------------------------------------
-    //      Updating
+    //      Strategies
     // ------------------------------------------------------------------------------
 
     /**
-     * Creates a new record with given JSON-API data.
-     *
-     * @param DataObjectInterface $data
-     * @return mixed|false
+     * @param string $strategy
+     * @return \Czim\DataStore\Contracts\Stores\Filtering\FilterStrategyInterface
      */
-    public function create(DataObjectInterface $data)
+    protected function makeFilterStrategyInstance($strategy)
     {
-        // TODO: Implement create() method.
+        /** @var FilterStrategyFactoryInterface $factory */
+        $factory = app(FilterStrategyFactoryInterface::class);
+
+        return $factory->driver($this->strategyDriver)->make($strategy);
     }
 
     /**
-     * Updates a record by ID with given JSON-API data.
-     *
-     * @param string              $id
-     * @param DataObjectInterface $data
-     * @return bool
+     * @param string $strategy
+     * @return \Czim\DataStore\Contracts\Stores\Sorting\SortStrategyInterface
      */
-    public function updatedById($id, DataObjectInterface $data)
+    protected function makeSortStrategyInstance($strategy)
     {
-        // TODO: Implement updatedById() method.
+        /** @var SortStrategyFactoryInterface $factory */
+        $factory = app(SortStrategyFactoryInterface::class);
+
+        return $factory->driver($this->strategyDriver)->make($strategy);
     }
 
+
+    // ------------------------------------------------------------------------------
+    //      Abstract
+    // ------------------------------------------------------------------------------
+
     /**
-     * Deletes a record by ID.
+     * Returns a model instance.
      *
-     * @param string $id
-     * @return bool
+     * @return Model
      */
-    public function deleteById($id)
-    {
-        // TODO: Implement deleteById() method.
-    }
+    abstract protected function getModel();
+
+    /**
+     * Returns a fresh query builder for the model.
+     *
+     * @return Builder|EloquentBuilder
+     */
+    abstract protected function retrieveQuery();
+
+    /**
+     * Returns model by ID.
+     *
+     * @param mixed $id
+     * @return mixed
+     */
+    abstract protected function retrieveById($id);
+
+    /**
+     * Returns many models by an array of IDs.
+     *
+     * @param array $ids
+     * @return mixed
+     */
+    abstract protected function retrieveManyById(array $ids);
 
 }
