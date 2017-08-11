@@ -46,8 +46,30 @@ php artisan vendor:publish
 
 ## Documentation
 
-To Do ...
+This data store package is split up, responsibility-wise, into two layers: the resource adapter and the data store itself.
 
+A data store is responsible for retrieving and manipulating data.
+The resource adapter is an interface layer between the data store and the incoming and outgoing data (which can be JSON-API, or any custom transformation/formatting layer that you choose to implement).
+
+
+### Data Stores
+
+Available data stores:
+
+- `\Czim\DataStore\Stores\EloquentDataStore`  
+    Simple Model data store.
+
+- `\Czim\DataStore\Stores\EloquentDataStore`  
+    Store to use if you have a repository (`Czim\Repository\Contracts\BaseRepositoryInterface`) available.
+
+### Resource Adapter
+
+This package only provides a resource adapter set-up for JSON-API out of the box, expecting you to use `czim/laravel-jsonapi`.
+For any other implementation, you're encouraged to write your own adapter. This package has been designed to make it easy to swap out (custom) implementations, provided some familiarity with Laravel's container and provisioning.
+
+### Retrieval Context
+
+The context for retrieving information (filters, sorting, pagination) is defined in interfaces. A `RequestContext` object may be filled with data in any way, and then passed into the data store to restrict or sort the results. No specific implementation is assumed for this.
 
 
 ## Contributing
