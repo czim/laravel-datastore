@@ -35,10 +35,9 @@ class DataStoreServiceProvider extends ServiceProvider
      */
     protected function registerInterfaces()
     {
-        $defaultDriver = $this->app['config']->get('datastore.drivers.adapter.default.factory');
+        $defaultDriver = $this->app['config']->get('datastore.drivers.adapter.default');
 
         $resourceFactoryClass = $this->app['config']->get("datastore.drivers.adapter.drivers.{$defaultDriver}.factory");
-
         $this->app->singleton(ResourceAdapterFactoryInterface::class, $resourceFactoryClass);
 
 

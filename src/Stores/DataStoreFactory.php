@@ -10,6 +10,7 @@ use UnexpectedValueException;
 
 class DataStoreFactory implements DataStoreFactoryInterface
 {
+
     /**
      * @var string|null
      */
@@ -82,7 +83,7 @@ class DataStoreFactory implements DataStoreFactoryInterface
     }
 
     /**
-     *
+     * Resets the adapter to prepare for the next (fluent) call.
      */
     protected function resetAdapter()
     {
@@ -102,7 +103,7 @@ class DataStoreFactory implements DataStoreFactoryInterface
      */
     protected function getResourceAdapterFactoryClass()
     {
-        return config('datastore.drivers.adapter.drivers.' . $this->getAdapterDriverString());
+        return config('datastore.drivers.adapter.drivers.' . $this->getAdapterDriverString() . '.factory');
     }
 
     /**
