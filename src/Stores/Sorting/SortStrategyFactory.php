@@ -1,10 +1,10 @@
 <?php
-namespace Czim\DataStore\Stores\Filtering;
+namespace Czim\DataStore\Stores\Sorting;
 
-use Czim\DataStore\Contracts\Stores\Filtering\FilterStrategyFactoryInterface;
-use Czim\DataStore\Contracts\Stores\Filtering\FilterStrategyInterface;
+use Czim\DataStore\Contracts\Stores\Sorting\SortStrategyFactoryInterface;
+use Czim\DataStore\Contracts\Stores\Sorting\SortStrategyInterface;
 
-class FilterStrategyFactory implements FilterStrategyFactoryInterface
+class SortStrategyFactory implements SortStrategyFactoryInterface
 {
     /**
      * @var string|null
@@ -25,10 +25,10 @@ class FilterStrategyFactory implements FilterStrategyFactoryInterface
     }
 
     /**
-     * Makes a filter strategy instance.
+     * Makes a sort strategy instance.
      *
      * @param string $strategy
-     * @return FilterStrategyInterface
+     * @return SortStrategyInterface
      */
     public function make($strategy)
     {
@@ -46,11 +46,11 @@ class FilterStrategyFactory implements FilterStrategyFactoryInterface
      */
     protected function getClassForStrategy($strategy)
     {
-        $strategy = $strategy ?: config('datastore.filter.default');
+        $strategy = $strategy ?: config('datastore.sort.default');
 
         return config(
-            "datastore.filter.class-map.{$this->getDriverString()}.{$strategy}",
-            config("datastore.filter.class-map-default.{$strategy}")
+            "datastore.sort.class-map.{$this->getDriverString()}.{$strategy}",
+            config("datastore.sort.class-map-default.{$strategy}")
         );
     }
 
