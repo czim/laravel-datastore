@@ -20,7 +20,7 @@ class ExactCaseInsensitiveStrategy implements FilterStrategyInterface
     public function apply($query, $column, $value)
     {
         if (is_array($value)) {
-            return $query->whereIn(DB::raw('lower(' . $column . ')'), strtolower($value));
+            return $query->whereIn(DB::raw('lower(' . $column . ')'), array_map('strtolower', $value));
         }
 
         return $query->where(DB::raw('lower(' . $column . ')'), '=', strtolower($value));
