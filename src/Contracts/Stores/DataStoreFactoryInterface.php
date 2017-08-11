@@ -20,7 +20,7 @@ interface DataStoreFactoryInterface
      * @param object $object
      * @return DataStoreInterface
      */
-    public function makeForObject(object $object);
+    public function makeForObject($object);
 
     /**
      * Makes a data store for an Eloquent model instance.

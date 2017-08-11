@@ -39,7 +39,7 @@ class DataStoreFactory implements DataStoreFactoryInterface
      * @param object $object
      * @return DataStoreInterface
      */
-    public function makeForObject(object $object)
+    public function makeForObject($object)
     {
         if ($object instanceof Model) {
             return $this->makeForModel($object);
