@@ -24,7 +24,9 @@ class JsonApiEloquentResourceAdapter implements ResourceAdapterInterface
 
 
     /**
-     * Returns the data storage key to use for a given incoming attribute.
+     * Returns the data storage key to use for a given presentation attribute.
+     *
+     * For an Eloquent model, this would be the corresponding model attribute.
      *
      * @param string $attribute
      * @return string
@@ -32,6 +34,19 @@ class JsonApiEloquentResourceAdapter implements ResourceAdapterInterface
     public function dataKeyForAttribute($attribute)
     {
         return $this->resource->getModelAttributeForApiAttribute($attribute);
+    }
+
+    /**
+     * Returns the data storage key to use for a given presentation include.
+     *
+     * For an Eloquent model, this would be the corresponding relation method name.
+     *
+     * @param string $include
+     * @return string
+     */
+    public function dataKeyForInclude($include)
+    {
+        return $this->resource->getRelationMethodForInclude($include);
     }
 
     /**

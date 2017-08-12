@@ -18,6 +18,14 @@ interface ResourceAdapterInterface
     public function dataKeyForAttribute($attribute);
 
     /**
+     * Returns the data storage key to use for a given presentation include.
+     *
+     * @param string $include
+     * @return string
+     */
+    public function dataKeyForInclude($include);
+
+    /**
      * Returns available include keys.
      *
      * @return string[]
