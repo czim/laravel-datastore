@@ -20,9 +20,11 @@ abstract class AbstractResourceAdapterFactory implements ResourceAdapterFactoryI
     {
         $model = $repository->makeModel(false);
 
+        // @codeCoverageIgnoreStart
         if ($model instanceof EloquentBuilder) {
             $model = $model->getModel();
         }
+        // @codeCoverageIgnoreEnd
 
         /** @var Model $model */
         return $this->makeForModel($model);
