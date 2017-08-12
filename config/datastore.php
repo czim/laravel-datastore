@@ -51,57 +51,16 @@ return [
             ],
         ],
 
-        'strategies' => [
+        'database' => [
             'default' => 'mysql',
 
-            'filtering' => [
+            'drivers' => [
 
-                'mysql'   => [
-                    'default' => FilterStrategies\LikeStrategy::class,
-                    'map'     => [
-                        FilterStrategyEnum::EXACT                  => FilterStrategies\ExactStrategy::class,
-                        FilterStrategyEnum::EXACT_CASE_INSENSITIVE => FilterStrategies\ExactStrategy::class,
-                        FilterStrategyEnum::EXACT_COMMA_SEPARATED  => FilterStrategies\ExactCommaSeparatedStrategy::class,
-                        FilterStrategyEnum::LIKE                   => FilterStrategies\LikeStrategy::class,
-                        FilterStrategyEnum::LIKE_CASE_INSENSITIVE  => FilterStrategies\LikeStrategy::class,
-                    ],
-                ],
-
-                'postgres' => [
-                    'default' => FilterStrategies\Postgres\LikeCaseInsensitiveStrategy::class,
-                    'map'     => [
-                        FilterStrategyEnum::EXACT                  => FilterStrategies\ExactStrategy::class,
-                        FilterStrategyEnum::EXACT_CASE_INSENSITIVE => FilterStrategies\Postgres\ExactCaseInsensitiveStrategy::class,
-                        FilterStrategyEnum::EXACT_COMMA_SEPARATED  => FilterStrategies\ExactCommaSeparatedStrategy::class,
-                        FilterStrategyEnum::LIKE                   => FilterStrategies\LikeStrategy::class,
-                        FilterStrategyEnum::LIKE_CASE_INSENSITIVE  => FilterStrategies\Postgres\LikeCaseInsensitiveStrategy::class,
-                    ],
+                'mysql' => [
                 ],
 
                 'sqlite' => [
-                    'default' => FilterStrategies\LikeStrategy::class,
-                    'map'     => [
-                        FilterStrategyEnum::EXACT                  => FilterStrategies\ExactStrategy::class,
-                        FilterStrategyEnum::EXACT_CASE_INSENSITIVE => FilterStrategies\ExactStrategy::class,
-                        FilterStrategyEnum::EXACT_COMMA_SEPARATED  => FilterStrategies\ExactCommaSeparatedStrategy::class,
-                        FilterStrategyEnum::LIKE                   => FilterStrategies\LikeStrategy::class,
-                        FilterStrategyEnum::LIKE_CASE_INSENSITIVE  => FilterStrategies\LikeStrategy::class,
-                    ],
                 ],
-            ],
-
-            'sorting' => [
-
-                'mysql'   => [
-                    'handler' => \Czim\DataStore\Stores\Sorting\EloquentSorter::class,
-                    'map'     => [
-                        FilterStrategyEnum::EXACT                  => FilterStrategies\ExactStrategy::class,
-                        FilterStrategyEnum::EXACT_CASE_INSENSITIVE => FilterStrategies\ExactStrategy::class,
-                        FilterStrategyEnum::LIKE                   => FilterStrategies\LikeStrategy::class,
-                        FilterStrategyEnum::LIKE_CASE_INSENSITIVE  => FilterStrategies\LikeStrategy::class,
-                    ],
-                ],
-
             ],
         ],
 
@@ -144,6 +103,28 @@ return [
 
             //App\Models\YourModel::class => [
             //],
+        ],
+
+        // Class map for strategy enum values to strategy classes
+        'class-map-default' => [
+            FilterStrategyEnum::LIKE                   => FilterStrategies\LikeStrategy::class,
+            FilterStrategyEnum::LIKE_CASE_INSENSITIVE  => FilterStrategies\LikeStrategy::class,
+            FilterStrategyEnum::EXACT                  => FilterStrategies\ExactStrategy::class,
+            FilterStrategyEnum::EXACT_CASE_INSENSITIVE => FilterStrategies\ExactStrategy::class,
+            FilterStrategyEnum::EXACT_COMMA_SEPARATED  => FilterStrategies\ExactCommaSeparatedStrategy::class,
+        ],
+
+        // If a specific mapping for an enum value is not given for a specific driver,
+        // the above defined default mapping is used.
+        'class-map' => [
+
+            'mysql' => [
+            ],
+
+            'postgres' => [
+                FilterStrategyEnum::LIKE_CASE_INSENSITIVE  => FilterStrategies\Postgres\LikeCaseInsensitiveStrategy::class,
+                FilterStrategyEnum::EXACT_CASE_INSENSITIVE => FilterStrategies\Postgres\ExactCaseInsensitiveStrategy::class,
+            ],
         ],
     ],
 
@@ -188,6 +169,37 @@ return [
             //App\Models\YourModel::class => [
             //],
         ],
+
+        // Class map for strategy enum values to strategy classes
+        'class-map-default' => [
+            SortStrategyEnum::ALPHABETIC => SortStrategies\AlphabeticStrategy::class,
+            SortStrategyEnum::NUMERIC    => SortStrategies\AlphabeticStrategy::class,
+        ],
+
+        // If a specific mapping for an enum value is not given for a specific driver,
+        // the above defined default mapping is used.
+        'class-map' => [
+
+            'mysql' => [
+            ],
+
+            'postgres' => [
+            ],
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Pagination
+    |--------------------------------------------------------------------------
+    |
+    */
+
+    'pagination' => [
+
+        // Default page size
+        'size' => 10,
+
     ],
 
 ];
