@@ -103,7 +103,7 @@ class DataStoreFactory implements DataStoreFactoryInterface
      */
     protected function getResourceAdapterFactoryClass()
     {
-        return config('datastore.drivers.adapter.drivers.' . $this->getAdapterDriverString() . '.factory');
+        return config("datastore.drivers.adapter.drivers.{$this->getAdapterDriverString()}.factory");
     }
 
     /**
