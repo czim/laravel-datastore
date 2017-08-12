@@ -9,4 +9,13 @@ namespace Czim\DataStore\Contracts\Stores;
  */
 interface DataStoreInterface extends DataStoreRetrieveInterface, DataStoreUpdateInterface
 {
+
+    /**
+     * Sets the default page size to use if none specified.
+     *
+     * @param int $size
+     * @return $this
+     */
+    public function setDefaultPageSize($size);
+
 }

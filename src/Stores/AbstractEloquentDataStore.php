@@ -39,6 +39,13 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
      */
     protected $includes = [];
 
+    /**
+     * The default page size to use if none specified.
+     *
+     * @var int|null
+     */
+    protected $defaultPageSize;
+
 
     /**
      * @param ResourceAdapterInterface $resourceAdapter
@@ -46,6 +53,21 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
     public function __construct(ResourceAdapterInterface $resourceAdapter)
     {
         $this->resourceAdapter = $resourceAdapter;
+
+        $this->defaultPageSize = config('datastore.pagination.size');
+    }
+
+    /**
+     * Sets the default page size to use if none specified.
+     *
+     * @param int $size
+     * @return $this
+     */
+    public function setDefaultPageSize($size)
+    {
+        $this->defaultPageSize = (int) $size;
+
+        return $this;
     }
 
     /**
@@ -96,7 +118,7 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
 
             $total = (clone $query)->count();
             $page  = max($context->pageNumber(), 1);
-            $size  = $context->pageSize() ?: config('jsonapi.pagination.size');
+            $size  = $context->pageSize() ?: $this->defaultPageSize;
 
             return new LengthAwarePaginator(
                 $query->take($size)->skip($page - 1 * $size)->get(),
