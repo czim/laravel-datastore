@@ -1,6 +1,7 @@
 <?php
 namespace Czim\DataStore\Resource\JsonApi;
 
+use Czim\DataStore\Context\SortKey;
 use Czim\DataStore\Contracts\Resource\ResourceAdapterInterface;
 use Czim\JsonApi\Contracts\Resource\EloquentResourceInterface;
 
@@ -87,7 +88,6 @@ class JsonApiEloquentResourceAdapter implements ResourceAdapterInterface
     /**
      * Returns available sorting keys (without direction).
      *
-     *
      * @return string[]
      */
     public function availableSortKeys()
@@ -98,10 +98,19 @@ class JsonApiEloquentResourceAdapter implements ResourceAdapterInterface
     /**
      * Returns default sorting keys (with direction).
      *
-     * @return string[]
+     * @return SortKey[]
      */
     public function defaultSorting()
     {
-        return $this->resource->defaultSortAttributes();
+        return array_map(
+            function ($sort) {
+                if ($sort instanceof SortKey) {
+                    return $sort;
+                }
+                return new SortKey(ltrim($sort, '-'), substr($sort, 0, 1) == '-');
+            },
+            $this->resource->defaultSortAttributes()
+        );
     }
+
 }

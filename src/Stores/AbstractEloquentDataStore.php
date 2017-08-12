@@ -1,6 +1,7 @@
 <?php
 namespace Czim\DataStore\Stores;
 
+use Czim\DataStore\Context\SortKey;
 use Czim\DataStore\Contracts\Context\ContextInterface;
 use Czim\DataStore\Contracts\Resource\ResourceAdapterInterface;
 use Czim\DataStore\Contracts\Stores\DataStoreInterface;
@@ -173,8 +174,8 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
     /**
      * Applies sorting order to a query.
      *
-     * @param Builder $query
-     * @param array   $sorting
+     * @param Builder   $query
+     * @param SortKey[] $sorting
      * @return Builder
      */
     public function applySorting($query, array $sorting)
@@ -186,7 +187,7 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
             $available = $this->resourceAdapter->availableSortKeys();
 
             $sorting = array_filter($sorting, function ($attribute) use ($available) {
-                return in_array(ltrim($attribute, '-'), $available);
+                return in_array($attribute, $available);
             });
         }
 
@@ -195,9 +196,14 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
         }
 
         foreach ($sorting as $sort) {
-            $attribute = $this->resourceAdapter->dataKeyForAttribute(ltrim($sort, '-'));
 
-            $this->applySortParameter($query, $attribute, starts_with($sort, '-'));
+            if ( ! ($sort instanceof $sort)) {
+                $sort = new SortKey($sort);
+            }
+
+            $attribute = $this->resourceAdapter->dataKeyForAttribute($sort->getKey());
+
+            $this->applySortParameter($query, $attribute, $sort->isReversed());
         }
 
         return $query;
