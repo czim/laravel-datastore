@@ -7,15 +7,15 @@ use Czim\DataStore\Contracts\Context\ContextInterface;
 /**
  * Class RequestContext
  *
- * @property bool    $standard_pagination
- * @property bool    $cursor_pagination
- * @property integer $page_number
- * @property integer $page_size
- * @property integer $page_offset
- * @property integer $page_limit
- * @property mixed   $page_cursor
- * @property array   $filters
- * @property string[] $sorting
+ * @property bool      $standard_pagination
+ * @property bool      $cursor_pagination
+ * @property integer   $page_number
+ * @property integer   $page_size
+ * @property integer   $page_offset
+ * @property integer   $page_limit
+ * @property mixed     $page_cursor
+ * @property array     $filters
+ * @property SortKey[] $sorting
  */
 class RequestContext extends AbstractDataObject implements ContextInterface
 {
@@ -115,11 +115,25 @@ class RequestContext extends AbstractDataObject implements ContextInterface
     /**
      * Returns sorting keys to apply in specific order.
      *
-     * @return string[]
+     * @return SortKey[]
      */
     public function sorting()
     {
-        return $this->sorting ?: [];
+        if ( ! $this->sorting || ! count($this->sorting)) {
+            return [];
+        }
+
+        $this->sorting = array_map(
+            function ($sort) {
+                if ($sort instanceof SortKey) {
+                    return $sort;
+                }
+                return new SortKey(ltrim($sort, '-'), substr($sort, 0, 1) == '-');
+            },
+            $this->sorting
+        );
+
+        return $this->sorting;
     }
 
 }

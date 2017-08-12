@@ -2,6 +2,7 @@
 namespace Czim\DataStore\Test\Unit\Context;
 
 use Czim\DataStore\Context\RequestContext;
+use Czim\DataStore\Context\SortKey;
 use Czim\DataStore\Test\TestCase;
 
 class RequestContextTest extends TestCase
@@ -99,6 +100,7 @@ class RequestContextTest extends TestCase
 
     /**
      * @test
+     * @uses \Czim\DataStore\Context\SortKey
      */
     function it_returns_sort_attributes()
     {
@@ -108,7 +110,16 @@ class RequestContextTest extends TestCase
 
         $context->sorting = ['-test', 'testing'];
 
-        static::assertEquals(['-test', 'testing'], $context->sorting());
+        $sorting = $context->sorting();
+
+        static::assertInternalType('array', $sorting);
+        static::assertCount(2, $sorting);
+        static::assertInstanceOf(SortKey::class, $sorting[0]);
+        static::assertEquals('test', $sorting[0]->getKey());
+        static::assertTrue($sorting[0]->isReversed());
+        static::assertInstanceOf(SortKey::class, $sorting[1]);
+        static::assertEquals('testing', $sorting[1]->getKey());
+        static::assertFalse($sorting[1]->isReversed());
     }
 
 }
