@@ -1,6 +1,7 @@
 <?php
 namespace Czim\DataStore\Resource\JsonApi;
 
+use Czim\DataStore\Context\SortKey;
 use Czim\DataStore\Test\TestCase;
 use Czim\JsonApi\Contracts\Resource\EloquentResourceInterface;
 use Mockery;
@@ -20,6 +21,20 @@ class JsonApiEloquentAdapterTest extends TestCase
         $adapter = new JsonApiEloquentResourceAdapter($resource);
 
         static::assertEquals('result', $adapter->dataKeyForAttribute('testing'));
+    }
+
+    /**
+     * @test
+     */
+    function it_returns_data_key_for_include()
+    {
+        $resource = $this->getMockResource();
+
+        $resource->shouldReceive('getRelationMethodForInclude')->once()->with('testing')->andReturn('result');
+
+        $adapter = new JsonApiEloquentResourceAdapter($resource);
+
+        static::assertEquals('result', $adapter->dataKeyForInclude('testing'));
     }
 
     /**
@@ -108,8 +123,27 @@ class JsonApiEloquentAdapterTest extends TestCase
 
     /**
      * @test
+     * @uses \Czim\DataStore\Context\SortKey
      */
     function it_returns_default_sortkeys()
+    {
+        $resource = $this->getMockResource();
+
+        $sorts = [
+            new SortKey('test', true),
+        ];
+
+        $resource->shouldReceive('defaultSortAttributes')->once()->andReturn($sorts);
+
+        $adapter = new JsonApiEloquentResourceAdapter($resource);
+
+        static::assertEquals($sorts, $adapter->defaultSorting());
+    }
+
+    /**
+     * @test
+     */
+    function it_returns_default_sortkeys_making_sortkey_instances_as_required()
     {
         $resource = $this->getMockResource();
 

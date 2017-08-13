@@ -122,4 +122,25 @@ class RequestContextTest extends TestCase
         static::assertFalse($sorting[1]->isReversed());
     }
 
+    /**
+     * @test
+     * @uses \Czim\DataStore\Context\SortKey
+     */
+    function it_returns_sort_attributes_when_already_cast_as_sortkey_instances()
+    {
+        $context = new RequestContext;
+
+        static::assertSame([], $context->sorting(), 'Unset sort should return empty array');
+
+        $context->sorting = [ new SortKey('test', true) ];
+
+        $sorting = $context->sorting();
+
+        static::assertInternalType('array', $sorting);
+        static::assertCount(1, $sorting);
+        static::assertInstanceOf(SortKey::class, $sorting[0]);
+        static::assertEquals('test', $sorting[0]->getKey());
+        static::assertTrue($sorting[0]->isReversed());
+    }
+
 }
