@@ -1,7 +1,6 @@
 <?php
 namespace Czim\DataStore\Stores;
 
-use Czim\DataObject\Contracts\DataObjectInterface;
 use Czim\DataStore\Contracts\Resource\ResourceAdapterInterface;
 use Czim\Repository\Contracts\BaseRepositoryInterface;
 use Czim\Repository\Criteria\Common\WithRelations;
@@ -96,45 +95,6 @@ class EloquentRepositoryDataStore extends AbstractEloquentDataStore
         $key = $this->getModel()->getQualifiedKeyName();
 
         return $this->repository->query()->whereIn($key, $ids)->get();
-    }
-
-
-    // ------------------------------------------------------------------------------
-    //      Updating
-    // ------------------------------------------------------------------------------
-
-    /**
-     * Creates a new record with given JSON-API data.
-     *
-     * @param DataObjectInterface $data
-     * @return mixed|false
-     */
-    public function create(DataObjectInterface $data)
-    {
-        // TODO: Implement create() method.
-    }
-
-    /**
-     * Updates a record by ID with given JSON-API data.
-     *
-     * @param string              $id
-     * @param DataObjectInterface $data
-     * @return bool
-     */
-    public function updatedById($id, DataObjectInterface $data)
-    {
-        // TODO: Implement updatedById() method.
-    }
-
-    /**
-     * Deletes a record by ID.
-     *
-     * @param string $id
-     * @return bool
-     */
-    public function deleteById($id)
-    {
-        // TODO: Implement deleteById() method.
     }
 
 }

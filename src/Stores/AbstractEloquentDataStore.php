@@ -1,14 +1,17 @@
 <?php
 namespace Czim\DataStore\Stores;
 
+use Czim\DataObject\Contracts\DataObjectInterface;
 use Czim\DataStore\Context\SortKey;
 use Czim\DataStore\Contracts\Context\ContextInterface;
 use Czim\DataStore\Contracts\Resource\ResourceAdapterInterface;
 use Czim\DataStore\Contracts\Stores\DataStoreInterface;
 use Czim\DataStore\Contracts\Stores\Filtering\FilterStrategyFactoryInterface;
+use Czim\DataStore\Contracts\Stores\Manipulation\DataManipulatorInterface;
 use Czim\DataStore\Contracts\Stores\Sorting\SortStrategyFactoryInterface;
 use Czim\DataStore\Enums\FilterStrategyEnum;
 use Czim\DataStore\Enums\SortStrategyEnum;
+use Czim\DataStore\Exceptions\FeatureNotSupportedException;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Query\Builder;
@@ -21,6 +24,11 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
      * @var ResourceAdapterInterface
      */
     protected $resourceAdapter;
+
+    /**
+     * @var DataManipulatorInterface|null
+     */
+    protected $manipulator;
 
     /**
      * @var string
@@ -55,6 +63,21 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
         $this->resourceAdapter = $resourceAdapter;
 
         $this->defaultPageSize = config('datastore.pagination.size');
+    }
+
+    /**
+     * Sets the manipulator to use, if any.
+     *
+     * If no manipulator is set, record manipulation is not supported.
+     *
+     * @param DataManipulatorInterface|null $manipulator
+     * @return $this
+     */
+    public function setManipulator(DataManipulatorInterface $manipulator = null)
+    {
+        $this->manipulator = $manipulator;
+
+        return $this;
     }
 
     /**
@@ -318,6 +341,102 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
 
         return $factory->driver($this->strategyDriver)->make($strategy);
     }
+
+
+    // ------------------------------------------------------------------------------
+    //      Manipulation
+    // ------------------------------------------------------------------------------
+
+    /**
+     * Creates a new record with given JSON-API data.
+     *
+     * @param DataObjectInterface $data
+     * @return false|mixed
+     * @throws FeatureNotSupportedException
+     */
+    public function create(DataObjectInterface $data)
+    {
+        if (null === $this->manipulator) {
+            throw new FeatureNotSupportedException('No manipulator set');
+        }
+
+        return $this->manipulator->create($data);
+    }
+
+    /**
+     * Updates a record by ID with given JSON-API data.
+     *
+     * @param mixed               $id
+     * @param DataObjectInterface $data
+     * @return bool
+     * @throws FeatureNotSupportedException
+     */
+    public function updateById($id, DataObjectInterface $data)
+    {
+        if (null === $this->manipulator) {
+            throw new FeatureNotSupportedException('No manipulator set');
+        }
+
+        return $this->manipulator->updateById($id, $data);
+    }
+
+    /**
+     * Deletes a record by ID.
+     *
+     * @param mixed $id
+     * @return bool
+     * @throws FeatureNotSupportedException
+     */
+    public function deleteById($id)
+    {
+        if (null === $this->manipulator) {
+            throw new FeatureNotSupportedException('No manipulator set');
+        }
+
+        return $this->manipulator->deleteById($id);
+    }
+
+    /**
+     * Attaches records as related to a given record.
+     *
+     * @param mixed  $id
+     * @param string $include
+     * @param array  $ids
+     * @param bool   $detaching
+     * @return bool
+     * @throws FeatureNotSupportedException
+     */
+    public function attachAsRelated($id, $include, array $ids, $detaching = false)
+    {
+        if (null === $this->manipulator) {
+            throw new FeatureNotSupportedException('No manipulator set');
+        }
+
+        $relation = $this->resourceAdapter->dataKeyForInclude($include);
+
+        return $this->manipulator->attachAsRelated($id, $relation, $ids, $detaching);
+    }
+
+    /**
+     * Detaches records as related to a given record.
+     *
+     * @param mixed  $id
+     * @param string $include
+     * @param array  $ids
+     * @return bool
+     * @throws FeatureNotSupportedException
+     */
+    public function detachAsRelated($id, $include, array $ids)
+    {
+        if (null === $this->manipulator) {
+            throw new FeatureNotSupportedException('No manipulator set');
+        }
+
+        $relation = $this->resourceAdapter->dataKeyForInclude($include);
+
+        return $this->manipulator->detachAsRelated($id, $relation, $ids);
+    }
+
 
 
     // ------------------------------------------------------------------------------

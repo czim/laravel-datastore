@@ -21,7 +21,7 @@ interface DataStoreUpdateInterface
      * @param DataObjectInterface $data
      * @return bool
      */
-    public function updatedById($id, DataObjectInterface $data);
+    public function updateById($id, DataObjectInterface $data);
 
     /**
      * Deletes a record by ID.
@@ -30,5 +30,26 @@ interface DataStoreUpdateInterface
      * @return bool
      */
     public function deleteById($id);
+
+    /**
+     * Attaches records as related to a given record.
+     *
+     * @param mixed  $id
+     * @param string $relation
+     * @param array  $ids
+     * @param bool   $detaching
+     * @return bool
+     */
+    public function attachAsRelated($id, $relation, array $ids, $detaching = false);
+
+    /**
+     * Detaches records as related to a given record.
+     *
+     * @param mixed  $id
+     * @param string $relation
+     * @param array  $ids
+     * @return bool
+     */
+    public function detachAsRelated($id, $relation, array $ids);
 
 }

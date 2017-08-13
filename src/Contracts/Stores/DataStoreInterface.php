@@ -1,6 +1,8 @@
 <?php
 namespace Czim\DataStore\Contracts\Stores;
 
+use Czim\DataStore\Contracts\Stores\Manipulation\DataManipulatorInterface;
+
 /**
  * Interface DataStoreInterface
  *
@@ -9,6 +11,16 @@ namespace Czim\DataStore\Contracts\Stores;
  */
 interface DataStoreInterface extends DataStoreRetrieveInterface, DataStoreUpdateInterface
 {
+
+    /**
+     * Sets the manipulator to use, if any.
+     *
+     * If no manipulator is set, record manipulation is not supported.
+     *
+     * @param DataManipulatorInterface|null $manipulator
+     * @return $this
+     */
+    public function setManipulator(DataManipulatorInterface $manipulator = null);
 
     /**
      * Sets the default page size to use if none specified.
