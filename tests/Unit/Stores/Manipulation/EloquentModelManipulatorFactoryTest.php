@@ -82,4 +82,15 @@ class EloquentModelManipulatorFactoryTest extends TestCase
         static::assertEquals(['test' => true], $manipulator->getConfig(), 'Config was not set');
     }
 
+    /**
+     * @test
+     * @expectedException \RuntimeException
+     */
+    function it_throws_and_exception_when_attempting_to_create_for_unsupported_object()
+    {
+        $factory = new EloquentModelManipulatorFactory;
+
+        $factory->makeForObject($this);
+    }
+
 }
