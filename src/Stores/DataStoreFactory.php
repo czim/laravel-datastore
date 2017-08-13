@@ -12,24 +12,46 @@ class DataStoreFactory implements DataStoreFactoryInterface
 {
 
     /**
+     * Driver to use for fluent call.
+     *
      * @var string|null
      */
-    protected $adapterDriver;
+    protected $driver;
+
+    /**
+     * Config to use for fluent call.
+     *
+     * @var array|null
+     */
+    protected $config;
 
 
     /**
-     * Sets the adapter for the next make call.
+     * Sets the driver for the next make call.
      *
      * @param string|null $driver
      * @return $this
      */
-    public function adapter($driver)
+    public function driver($driver)
     {
         if (empty($driver)) {
-            $this->adapterDriver = null;
+            $this->driver = null;
         } else {
-            $this->adapterDriver = $driver;
+            $this->driver = $driver;
         }
+
+        return $this;
+    }
+
+    /**
+     * Sets the configuration for the next make call.
+     *
+     * @param array $config
+     * @return $this
+     */
+    public function config(array $config = [])
+    {
+        $this->config = $config;
 
         return $this;
     }
@@ -46,21 +68,11 @@ class DataStoreFactory implements DataStoreFactoryInterface
             return $this->makeForModel($object);
         }
 
-
-        $adapterFactory = $this->getResourceAdapterFactory();
-
         if ($object instanceof BaseRepositoryInterface) {
-            $resourceAdapter = $adapterFactory->makeForRepository($object);
-            $store = new EloquentRepositoryDataStore($resourceAdapter);
-            $store->setRepository($object);
-
-        } else {
-            throw new UnexpectedValueException("Could not create data store for class '" . get_class($object) . "'");
+            return $this->makeForRepository($object);
         }
 
-        $this->resetAdapter();
-
-        return $store;
+        throw new UnexpectedValueException("Could not create data store for class '" . get_class($object) . "'");
     }
 
     /**
@@ -69,15 +81,48 @@ class DataStoreFactory implements DataStoreFactoryInterface
      * @param Model $model
      * @return DataStoreInterface
      */
-    public function makeForModel(Model $model)
+    protected function makeForModel(Model $model)
     {
         $adapterFactory  = $this->getResourceAdapterFactory();
-        $resourceAdapter = $adapterFactory->makeForModel($model);
 
-        // todo
-        $store = null;
+        $store = new EloquentDataStore;
 
-        $this->resetAdapter();
+        $store
+            ->setResourceAdapter($adapterFactory->makeForModel($model))
+            ->setStrategyDriver($this->getDatabaseDriverString())
+            ->setModel($model);
+
+        if ($pageSize = array_get($this->config, 'pagination.size')) {
+            $store->setDefaultPageSize($pageSize);
+        }
+
+        $this->reset();
+
+        return $store;
+    }
+
+    /**
+     * Makes a data store for a repository instance.
+     *
+     * @param BaseRepositoryInterface $repository
+     * @return EloquentRepositoryDataStore
+     */
+    protected function makeForRepository(BaseRepositoryInterface $repository)
+    {
+        $adapterFactory  = $this->getResourceAdapterFactory();
+
+        $store = new EloquentRepositoryDataStore;
+
+        $store
+            ->setResourceAdapter($adapterFactory->makeForRepository($repository))
+            ->setStrategyDriver($this->getDatabaseDriverString())
+            ->setRepository($repository);
+
+        if ($pageSize = array_get($this->config, 'pagination.size')) {
+            $store->setDefaultPageSize($pageSize);
+        }
+
+        $this->reset();
 
         return $store;
     }
@@ -85,10 +130,12 @@ class DataStoreFactory implements DataStoreFactoryInterface
     /**
      * Resets the adapter to prepare for the next (fluent) call.
      */
-    protected function resetAdapter()
+    protected function reset()
     {
-        $this->adapterDriver = null;
+        $this->driver = null;
+        $this->config = [];
     }
+
 
     /**
      * @return ResourceAdapterFactoryInterface
@@ -111,7 +158,25 @@ class DataStoreFactory implements DataStoreFactoryInterface
      */
     protected function getAdapterDriverString()
     {
-        return $this->adapterDriver ?: config('datastore.drivers.adapter.default', 'default');
+        return config("datastore.drivers.datastore.drivers.{$this->getDriverString()}.adapter")
+            ?: config('datastore.drivers.adapter.default', 'default');
+    }
+
+    /**
+     * @return string
+     */
+    protected function getDatabaseDriverString()
+    {
+        return config("datastore.drivers.datastore.drivers.{$this->getDriverString()}.database")
+            ?: config('datastore.drivers.database.default', 'mysql');
+    }
+
+    /**
+     * @return string
+     */
+    protected function getDriverString()
+    {
+        return $this->driver ?: config('datastore.drivers.datastore.default', 'model');
     }
 
 }

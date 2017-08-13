@@ -36,6 +36,8 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
     protected $modelClass;
 
     /**
+     * Database strategy driver key.
+     *
      * @var string
      */
     protected $strategyDriver = 'mysql';
@@ -55,14 +57,36 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
     protected $defaultPageSize;
 
 
+    public function __construct()
+    {
+        $this->defaultPageSize = config('datastore.pagination.size');
+    }
+
+
     /**
+     * Sets the resource adapter.
+     *
      * @param ResourceAdapterInterface $resourceAdapter
+     * @return $this
      */
-    public function __construct(ResourceAdapterInterface $resourceAdapter)
+    public function setResourceAdapter(ResourceAdapterInterface $resourceAdapter)
     {
         $this->resourceAdapter = $resourceAdapter;
 
-        $this->defaultPageSize = config('datastore.pagination.size');
+        return $this;
+    }
+
+    /**
+     * Sets the database strategy driver key.
+     *
+     * @param string $driver
+     * @return $this
+     */
+    public function setStrategyDriver($driver)
+    {
+        $this->strategyDriver = $driver;
+
+        return $this;
     }
 
     /**

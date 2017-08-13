@@ -6,9 +6,29 @@ use Czim\DataStore\Contracts\Stores\Manipulation\DataManipulatorInterface;
 use Czim\Repository\Contracts\BaseRepositoryInterface;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Eloquent\Model;
+use RuntimeException;
 
 class EloquentModelManipulatorFactory implements DataManipulatorFactoryInterface
 {
+
+    /**
+     * Makes a manipulator for a given object instance.
+     *
+     * @param object $object
+     * @return DataManipulatorInterface
+     */
+    public function makeForObject($object)
+    {
+        if ($object instanceof Model) {
+            return $this->makeForModel($object);
+        }
+
+        if ($object instanceof BaseRepositoryInterface) {
+            return $this->makeForRepository($object);
+        }
+
+        throw new RuntimeException('Unknown object type');
+    }
 
     /**
      * Returns a manipulator for a given model repository.
@@ -16,7 +36,7 @@ class EloquentModelManipulatorFactory implements DataManipulatorFactoryInterface
      * @param BaseRepositoryInterface $repository
      * @return DataManipulatorInterface
      */
-    public function makeForRepository(BaseRepositoryInterface $repository)
+    protected function makeForRepository(BaseRepositoryInterface $repository)
     {
         $model = $repository->makeModel(false);
 
@@ -36,7 +56,7 @@ class EloquentModelManipulatorFactory implements DataManipulatorFactoryInterface
      * @param Model $model
      * @return DataManipulatorInterface
      */
-    public function makeForModel(Model $model)
+    protected function makeForModel(Model $model)
     {
         /** @var EloquentModelManipulator $instance */
         $instance = app($this->getManipulatorClassForModelClass(get_class($model)));
@@ -70,7 +90,7 @@ class EloquentModelManipulatorFactory implements DataManipulatorFactoryInterface
      */
     protected function getConfigForModelClass($class)
     {
-        return config("datastore.manipulation.config.model.{$class}", $this->getDefaultManipulatorConfig());
+        return config("datastore.manipulation.config.model.{$class}", $this->getDefaultManipulatorConfig()) ?: [];
     }
 
     /**

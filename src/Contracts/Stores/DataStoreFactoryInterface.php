@@ -1,18 +1,24 @@
 <?php
 namespace Czim\DataStore\Contracts\Stores;
 
-use Illuminate\Database\Eloquent\Model;
-
 interface DataStoreFactoryInterface
 {
 
     /**
-     * Sets the adapter for the next make call.
+     * Sets the driver for the next make call.
      *
      * @param string|null $driver
      * @return $this
      */
-    public function adapter($driver);
+    public function driver($driver);
+
+    /**
+     * Sets the configuration for the next make call.
+     *
+     * @param array $config
+     * @return $this
+     */
+    public function config(array $config = []);
 
     /**
      * Makes a data store for a given object (type).
@@ -21,13 +27,5 @@ interface DataStoreFactoryInterface
      * @return DataStoreInterface
      */
     public function makeForObject($object);
-
-    /**
-     * Makes a data store for an Eloquent model instance.
-     *
-     * @param \Illuminate\Database\Eloquent\Model $model
-     * @return DataStoreInterface
-     */
-    public function makeForModel(Model $model);
 
 }

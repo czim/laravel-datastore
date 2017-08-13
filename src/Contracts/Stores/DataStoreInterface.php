@@ -1,6 +1,7 @@
 <?php
 namespace Czim\DataStore\Contracts\Stores;
 
+use Czim\DataStore\Contracts\Resource\ResourceAdapterInterface;
 use Czim\DataStore\Contracts\Stores\Manipulation\DataManipulatorInterface;
 
 /**
@@ -11,6 +12,22 @@ use Czim\DataStore\Contracts\Stores\Manipulation\DataManipulatorInterface;
  */
 interface DataStoreInterface extends DataStoreRetrieveInterface, DataStoreUpdateInterface
 {
+
+    /**
+     * Sets the resource adapter.
+     *
+     * @param ResourceAdapterInterface $resourceAdapter
+     * @return $this
+     */
+    public function setResourceAdapter(ResourceAdapterInterface $resourceAdapter);
+
+    /**
+     * Sets the database strategy driver key.
+     *
+     * @param string $driver
+     * @return $this
+     */
+    public function setStrategyDriver($driver);
 
     /**
      * Sets the manipulator to use, if any.

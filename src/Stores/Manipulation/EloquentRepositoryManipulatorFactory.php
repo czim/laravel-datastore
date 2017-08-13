@@ -16,7 +16,7 @@ class EloquentRepositoryManipulatorFactory extends EloquentModelManipulatorFacto
      * @param BaseRepositoryInterface $repository
      * @return DataManipulatorInterface
      */
-    public function makeForRepository(BaseRepositoryInterface $repository)
+    protected function makeForRepository(BaseRepositoryInterface $repository)
     {
         $model = $repository->makeModel(false);
 
@@ -44,7 +44,7 @@ class EloquentRepositoryManipulatorFactory extends EloquentModelManipulatorFacto
      * @param Model $model
      * @return DataManipulatorInterface
      */
-    public function makeForModel(Model $model)
+    protected function makeForModel(Model $model)
     {
         throw new RuntimeException('Not implemented');
     }
