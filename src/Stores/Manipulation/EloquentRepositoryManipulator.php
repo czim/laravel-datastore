@@ -2,68 +2,34 @@
 namespace Czim\DataStore\Stores\Manipulation;
 
 use Czim\DataObject\Contracts\DataObjectInterface;
-use Czim\DataStore\Contracts\Stores\Manipulation\DataManipulatorInterface;
-use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Czim\Repository\Contracts\BaseRepositoryInterface;
 
-class EloquentModelManipulator implements DataManipulatorInterface
+class EloquentRepositoryManipulator extends EloquentModelManipulator
 {
 
     /**
-     * @var Model|null
+     * @var BaseRepositoryInterface|null
      */
-    protected $model;
-
-    /**
-     * The configuration for record manipulation.
-     *
-     * @var array
-     */
-    protected $config = [];
+    protected $repository;
 
 
     /**
-     * @param Model $model
+     * @param BaseRepositoryInterface $repository
      * @return $this
      */
-    public function setModel(Model $model)
+    public function setRepository(BaseRepositoryInterface $repository)
     {
-        $this->model = $model;
+        $this->repository = $repository;
 
         return $this;
     }
 
     /**
-     * Returns the model set.
-     *
-     * @return Model|null
+     * @return BaseRepositoryInterface|null
      */
-    public function getModel()
+    public function getRepository()
     {
-        return $this->model;
-    }
-
-    /**
-     * Sets the configuration for record manipulation.
-     *
-     * @param array $config
-     * @return $this
-     */
-    public function setConfig(array $config)
-    {
-        $this->config = $config;
-
-        return $this;
-    }
-
-    /**
-     * Returns the configuration.
-     *
-     * @return array
-     */
-    public function getConfig()
-    {
-        return $this->config;
+        return $this->repository;
     }
 
 
@@ -75,7 +41,7 @@ class EloquentModelManipulator implements DataManipulatorInterface
      */
     public function create(DataObjectInterface $data)
     {
-        return $this->model::create($data->toArray());
+        return $this->repository->create($data->toArray());
     }
 
     /**
@@ -87,14 +53,7 @@ class EloquentModelManipulator implements DataManipulatorInterface
      */
     public function updateById($id, DataObjectInterface $data)
     {
-        /** @var Model $record */
-        $record = $this->model::find($id);
-
-        if ( ! $record) {
-            throw new ModelNotFoundException();
-        }
-
-        return $record->update($data->toArray());
+        return $this->repository->update($data->toArray(), $id);
     }
 
     /**
@@ -105,7 +64,7 @@ class EloquentModelManipulator implements DataManipulatorInterface
      */
     public function deleteById($id)
     {
-        return (bool) $this->model::destroy($id);
+        return $this->repository->delete($id);
     }
 
     /**
