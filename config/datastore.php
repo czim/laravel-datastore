@@ -25,16 +25,19 @@ return [
 
                 'model' => [
                     // Datastore class name
-                    'datastore' => Czim\DataStore\Stores\EloquentRepositoryDataStore::class,
+                    'datastore'           => Czim\DataStore\Stores\EloquentRepositoryDataStore::class,
+                    // Data manipulator factory class name
+                    'manipulator-factory' => Czim\DataStore\Stores\Manipulation\EloquentModelManipulatorFactory::class,
                     // Driver key for resource adapter (null for default)
-                    'adapter'   => null,
+                    'adapter'             => null,
                     // Driver key for database (null for default)
-                    'database'  => null,
+                    'database'            => null,
                 ],
 
                 'repository' => [
-                    'datastore' => Czim\DataStore\Stores\EloquentRepositoryDataStore::class,
-                    'adapter'   => null,
+                    'datastore'           => Czim\DataStore\Stores\EloquentRepositoryDataStore::class,
+                    'manipulator-factory' => Czim\DataStore\Stores\Manipulation\EloquentRepositoryManipulatorFactory::class,
+                    'adapter'             => null,
                 ],
             ],
         ],
@@ -184,6 +187,39 @@ return [
             ],
 
             'postgres' => [
+            ],
+        ],
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
+    | Manipulation
+    |--------------------------------------------------------------------------
+    |
+    | Configuration and mapping for record manipulation.
+    |
+    */
+
+    'manipulation' => [
+
+        // Manipulator class to use per class/FQN (model or repository, for instance)
+        // This may be used by the manipulator factory to build specific manipulators.
+        'class' => [
+
+            //App\Models\YourModel::class => App\DataStores\Manipulators\YourManipulator::class,
+        ],
+
+        'config' => [
+            // Default configuration to use if not specific is mapped for the model
+            'default' => [
+
+            ],
+
+            // Specific per model(FQN) defined configurations for manipulation
+            'model' => [
+
+                //App\Models\YourModel::class => [
+                //],
             ],
         ],
     ],
