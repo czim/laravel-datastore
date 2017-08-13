@@ -48,9 +48,11 @@ class EloquentRepositoryDataStore extends AbstractEloquentDataStore
     {
         $model = $this->repository->makeModel(false);
 
+        // @codeCoverageIgnoreStart
         if ($model instanceof Builder) {
             $model = $model->getModel();
         }
+        // @codeCoverageIgnoreEnd
 
         /** @var Model $model */
 

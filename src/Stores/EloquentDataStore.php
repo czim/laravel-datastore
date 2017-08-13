@@ -19,7 +19,7 @@ class EloquentDataStore extends AbstractEloquentDataStore
     protected $resourceAdapter;
 
     /**
-     * Strategies to use for JSON-API sort names (without '-' prefix).
+     * Strategies to use for JSON-API sort names.
      *
      * @var string[]
      */

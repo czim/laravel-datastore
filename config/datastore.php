@@ -49,7 +49,7 @@ return [
             'drivers' => [
 
                 'jsonapi' => [
-                    'factory' => \Czim\DataStore\Resource\JsonApi\JsonApiResourceAdapterFactory::class,
+                    'factory' => Czim\DataStore\Resource\JsonApi\JsonApiResourceAdapterFactory::class,
                 ],
             ],
         ],
