@@ -4,6 +4,8 @@ namespace Czim\DataStore\Stores;
 use Czim\DataStore\Contracts\Resource\ResourceAdapterFactoryInterface;
 use Czim\DataStore\Contracts\Stores\DataStoreFactoryInterface;
 use Czim\DataStore\Contracts\Stores\DataStoreInterface;
+use Czim\DataStore\Contracts\Stores\Manipulation\DataManipulatorFactoryInterface;
+use Czim\DataStore\Contracts\Stores\Manipulation\DataManipulatorInterface;
 use Czim\Repository\Contracts\BaseRepositoryInterface;
 use Illuminate\Database\Eloquent\Model;
 use UnexpectedValueException;
@@ -83,7 +85,7 @@ class DataStoreFactory implements DataStoreFactoryInterface
      */
     protected function makeForModel(Model $model)
     {
-        $adapterFactory  = $this->getResourceAdapterFactory();
+        $adapterFactory = $this->getResourceAdapterFactory();
 
         $store = new EloquentDataStore;
 
@@ -91,6 +93,10 @@ class DataStoreFactory implements DataStoreFactoryInterface
             ->setResourceAdapter($adapterFactory->makeForModel($model))
             ->setStrategyDriver($this->getDatabaseDriverString())
             ->setModel($model);
+
+        if ($manipulator = $this->getDataManipulator($model)) {
+            $store->setManipulator($manipulator);
+        }
 
         if ($pageSize = array_get($this->config, 'pagination.size')) {
             $store->setDefaultPageSize($pageSize);
@@ -109,7 +115,7 @@ class DataStoreFactory implements DataStoreFactoryInterface
      */
     protected function makeForRepository(BaseRepositoryInterface $repository)
     {
-        $adapterFactory  = $this->getResourceAdapterFactory();
+        $adapterFactory = $this->getResourceAdapterFactory();
 
         $store = new EloquentRepositoryDataStore;
 
@@ -117,6 +123,10 @@ class DataStoreFactory implements DataStoreFactoryInterface
             ->setResourceAdapter($adapterFactory->makeForRepository($repository))
             ->setStrategyDriver($this->getDatabaseDriverString())
             ->setRepository($repository);
+
+        if ($manipulator = $this->getDataManipulator($repository)) {
+            $store->setManipulator($manipulator);
+        }
 
         if ($pageSize = array_get($this->config, 'pagination.size')) {
             $store->setDefaultPageSize($pageSize);
@@ -169,6 +179,51 @@ class DataStoreFactory implements DataStoreFactoryInterface
     {
         return config("datastore.drivers.datastore.drivers.{$this->getDriverString()}.database")
             ?: config('datastore.drivers.database.default', 'mysql');
+    }
+
+    /**
+     * Returns the data manipulator for a given object.
+     *
+     * @param $object
+     * @return DataManipulatorInterface|null
+     */
+    protected function getDataManipulator($object)
+    {
+        $factory = $this->getDataManipulatorFactory();
+
+        if ( ! $factory) {
+            return null;
+        }
+
+        $manipulator = $factory->makeForObject($object);
+
+        if ( ! $manipulator) {
+            return null;
+        }
+
+        return $manipulator;
+    }
+
+    /**
+     * @return DataManipulatorFactoryInterface
+     */
+    protected function getDataManipulatorFactory()
+    {
+        $class = $this->getDataManipulatorFactoryClass();
+
+        if (empty($class)) {
+            return null;
+        }
+
+        return app($class);
+    }
+
+    /**
+     * @return string
+     */
+    protected function getDataManipulatorFactoryClass()
+    {
+        return config("datastore.drivers.datastore.drivers.{$this->getDriverString()}.manipulator-factory");
     }
 
     /**
