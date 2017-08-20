@@ -258,19 +258,25 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
             $available = $this->resourceAdapter->availableSortKeys();
 
             $sorting = array_filter($sorting, function ($attribute) use ($available) {
+                // @codeCoverageIgnoreStart
                 return in_array($attribute, $available);
+                // @codeCoverageIgnoreEnd
             });
         }
 
+        // @codeCoverageIgnoreStart
         if ([] === $sorting) {
             return $query;
         }
+        // @codeCoverageIgnoreEnd
 
         foreach ($sorting as $sort) {
 
+            // @codeCoverageIgnoreStart
             if ( ! ($sort instanceof $sort)) {
                 $sort = new SortKey($sort);
             }
+            // @codeCoverageIgnoreEnd
 
             $attribute = $this->resourceAdapter->dataKeyForAttribute($sort->getKey());
 
@@ -323,18 +329,6 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
     protected function queueIncludes(array $includes)
     {
         $this->includes = $includes;
-
-        return $this;
-    }
-
-    /**
-     * Clears currently queued includes.
-     *
-     * @return $this
-     */
-    protected function clearIncludes()
-    {
-        $this->includes = [];
 
         return $this;
     }
