@@ -105,11 +105,9 @@ class EloquentRepositoryDataStore extends AbstractEloquentDataStore
      */
     protected function retrieveManyById(array $ids)
     {
-        $this->repository->pushCriteriaOnce(new WithRelations($this->includes), CriteriaKey::WITH);
-
         $key = $this->getModel()->getQualifiedKeyName();
 
-        return $this->repository->query()->whereIn($key, $ids)->get();
+        return $this->retrieveQuery()->whereIn($key, $ids)->get();
     }
 
 }
