@@ -2,6 +2,8 @@
 namespace Czim\DataStore\Providers;
 
 use Czim\DataStore\Contracts\Resource\ResourceAdapterFactoryInterface;
+use Czim\DataStore\Contracts\Stores\DataStoreFactoryInterface;
+use Czim\DataStore\Stores\DataStoreFactory;
 use Illuminate\Support\ServiceProvider;
 
 class DataStoreServiceProvider extends ServiceProvider
@@ -38,9 +40,9 @@ class DataStoreServiceProvider extends ServiceProvider
         $defaultDriver = $this->app['config']->get('datastore.drivers.adapter.default');
 
         $resourceFactoryClass = $this->app['config']->get("datastore.drivers.adapter.drivers.{$defaultDriver}.factory");
+
+        $this->app->singleton(DataStoreFactoryInterface::class, DataStoreFactory::class);
         $this->app->singleton(ResourceAdapterFactoryInterface::class, $resourceFactoryClass);
-
-
 
         return $this;
     }
