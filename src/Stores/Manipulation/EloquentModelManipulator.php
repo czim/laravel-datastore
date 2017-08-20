@@ -75,7 +75,9 @@ class EloquentModelManipulator implements DataManipulatorInterface
      */
     public function create(DataObjectInterface $data)
     {
-        return $this->model::create($data->toArray());
+        $model = $this->model;
+
+        return $model::create($data->toArray());
     }
 
     /**
@@ -87,8 +89,10 @@ class EloquentModelManipulator implements DataManipulatorInterface
      */
     public function updateById($id, DataObjectInterface $data)
     {
+        $model = $this->model;
+
         /** @var Model $record */
-        $record = $this->model::find($id);
+        $record = $model::find($id);
 
         if ( ! $record) {
             throw new ModelNotFoundException();
@@ -105,7 +109,9 @@ class EloquentModelManipulator implements DataManipulatorInterface
      */
     public function deleteById($id)
     {
-        return (bool) $this->model::destroy($id);
+        $model = $this->model;
+
+        return (bool) $model::destroy($id);
     }
 
     /**
