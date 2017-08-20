@@ -2,13 +2,14 @@
 namespace Czim\DataStore\Stores;
 
 use Czim\DataStore\Contracts\Resource\ResourceAdapterInterface;
+use Czim\DataStore\Contracts\Stores\EloquentRepositoryDataStoreInterface;
 use Czim\Repository\Contracts\BaseRepositoryInterface;
 use Czim\Repository\Criteria\Common\WithRelations;
 use Czim\Repository\Enums\CriteriaKey;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
-class EloquentRepositoryDataStore extends AbstractEloquentDataStore
+class EloquentRepositoryDataStore extends AbstractEloquentDataStore implements EloquentRepositoryDataStoreInterface
 {
 
     /**

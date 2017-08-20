@@ -2,10 +2,11 @@
 namespace Czim\DataStore\Stores;
 
 use Czim\DataStore\Contracts\Resource\ResourceAdapterInterface;
+use Czim\DataStore\Contracts\Stores\EloquentModelDataStoreInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 
-class EloquentDataStore extends AbstractEloquentDataStore
+class EloquentDataStore extends AbstractEloquentDataStore implements EloquentModelDataStoreInterface
 {
 
     /**

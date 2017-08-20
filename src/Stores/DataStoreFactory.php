@@ -4,10 +4,13 @@ namespace Czim\DataStore\Stores;
 use Czim\DataStore\Contracts\Resource\ResourceAdapterFactoryInterface;
 use Czim\DataStore\Contracts\Stores\DataStoreFactoryInterface;
 use Czim\DataStore\Contracts\Stores\DataStoreInterface;
+use Czim\DataStore\Contracts\Stores\EloquentModelDataStoreInterface;
+use Czim\DataStore\Contracts\Stores\EloquentRepositoryDataStoreInterface;
 use Czim\DataStore\Contracts\Stores\Manipulation\DataManipulatorFactoryInterface;
 use Czim\DataStore\Contracts\Stores\Manipulation\DataManipulatorInterface;
 use Czim\Repository\Contracts\BaseRepositoryInterface;
 use Illuminate\Database\Eloquent\Model;
+use RuntimeException;
 use UnexpectedValueException;
 
 class DataStoreFactory implements DataStoreFactoryInterface
@@ -81,18 +84,26 @@ class DataStoreFactory implements DataStoreFactoryInterface
      * Makes a data store for an Eloquent model instance.
      *
      * @param Model $model
-     * @return DataStoreInterface
+     * @return DataStoreInterface|EloquentModelDataStoreInterface
      */
     protected function makeForModel(Model $model)
     {
         $adapterFactory = $this->getResourceAdapterFactory();
 
-        $store = new EloquentDataStore;
+        /** @var DataStoreInterface|EloquentModelDataStoreInterface $store */
+        $store = $this->getDataStoreInstance($model);
+
+        if ( ! ($store instanceof EloquentModelDataStoreInterface)) {
+            throw new RuntimeException(
+                "Created data store instance of type '" . get_class($store) . "', expected EloquentModelDataStoreInterface"
+            );
+        }
 
         $store
             ->setResourceAdapter($adapterFactory->makeForModel($model))
-            ->setStrategyDriver($this->getDatabaseDriverString())
-            ->setModel($model);
+            ->setStrategyDriver($this->getDatabaseDriverString());
+
+        $store->setModel($model);
 
         if ($manipulator = $this->getDataManipulator($model)) {
             $store->setManipulator($manipulator);
@@ -111,18 +122,26 @@ class DataStoreFactory implements DataStoreFactoryInterface
      * Makes a data store for a repository instance.
      *
      * @param BaseRepositoryInterface $repository
-     * @return EloquentRepositoryDataStore
+     * @return DataStoreInterface|EloquentRepositoryDataStoreInterface
      */
     protected function makeForRepository(BaseRepositoryInterface $repository)
     {
         $adapterFactory = $this->getResourceAdapterFactory();
 
-        $store = new EloquentRepositoryDataStore;
+        /** @var DataStoreInterface|EloquentRepositoryDataStoreInterface $store */
+        $store = $this->getDataStoreInstance($repository);
+
+        if ( ! ($store instanceof EloquentRepositoryDataStoreInterface)) {
+            throw new RuntimeException(
+                "Created data store instance of type '" . get_class($store) . "', expected EloquentRepositoryDataStoreInterface"
+            );
+        }
 
         $store
             ->setResourceAdapter($adapterFactory->makeForRepository($repository))
-            ->setStrategyDriver($this->getDatabaseDriverString())
-            ->setRepository($repository);
+            ->setStrategyDriver($this->getDatabaseDriverString());
+
+        $store->setRepository($repository);
 
         if ($manipulator = $this->getDataManipulator($repository)) {
             $store->setManipulator($manipulator);
@@ -182,9 +201,40 @@ class DataStoreFactory implements DataStoreFactoryInterface
     }
 
     /**
+     * @param object $object
+     * @return DataStoreInterface
+     */
+    protected function getDataStoreInstance($object)
+    {
+        $class = $this->determineDataStoreClassForObject($object);
+
+        return app($class);
+    }
+
+    /**
+     * @param object $object
+     * @return string
+     */
+    protected function determineDataStoreClassForObject($object)
+    {
+        $class = config("datastore.store-mapping.drivers.{$this->getDriverString()}." . get_class($object))
+              ?: config('datastore.store-mapping.default.' . get_class($object));
+
+        if ($class) {
+            return $class;
+        }
+
+        if ($object instanceof BaseRepositoryInterface) {
+            return EloquentRepositoryDataStore::class;
+        }
+
+        return EloquentDataStore::class;
+    }
+
+    /**
      * Returns the data manipulator for a given object.
      *
-     * @param $object
+     * @param object $object
      * @return DataManipulatorInterface|null
      */
     protected function getDataManipulator($object)
