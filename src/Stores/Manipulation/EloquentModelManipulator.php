@@ -81,7 +81,7 @@ class EloquentModelManipulator implements DataManipulatorInterface
     /**
      * Updates a record by ID with given JSON-API data.
      *
-     * @param string              $id
+     * @param mixed               $id
      * @param DataObjectInterface $data
      * @return bool
      */
@@ -100,7 +100,7 @@ class EloquentModelManipulator implements DataManipulatorInterface
     /**
      * Deletes a record by ID.
      *
-     * @param string $id
+     * @param mixed $id
      * @return bool
      */
     public function deleteById($id)

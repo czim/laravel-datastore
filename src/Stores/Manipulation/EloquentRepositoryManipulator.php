@@ -47,7 +47,7 @@ class EloquentRepositoryManipulator extends EloquentModelManipulator
     /**
      * Updates a record by ID with given JSON-API data.
      *
-     * @param string              $id
+     * @param mixed               $id
      * @param DataObjectInterface $data
      * @return bool
      */
@@ -59,7 +59,7 @@ class EloquentRepositoryManipulator extends EloquentModelManipulator
     /**
      * Deletes a record by ID.
      *
-     * @param string $id
+     * @param mixed $id
      * @return bool
      */
     public function deleteById($id)
