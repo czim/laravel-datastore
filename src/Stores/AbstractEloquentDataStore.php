@@ -471,7 +471,7 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
      *
      * @return Model
      */
-    abstract protected function getModel();
+    abstract public function getModel();
 
     /**
      * Returns a fresh query builder for the model.

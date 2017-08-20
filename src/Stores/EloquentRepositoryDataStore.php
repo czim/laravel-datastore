@@ -33,10 +33,23 @@ class EloquentRepositoryDataStore extends AbstractEloquentDataStore
      * Sets the repository to use for accessing data.
      *
      * @param BaseRepositoryInterface $repository
+     * @return $this
      */
     public function setRepository(BaseRepositoryInterface $repository)
     {
         $this->repository = $repository;
+
+        return $this;
+    }
+
+    /**
+     * Returns the used repository.
+     *
+     * @return BaseRepositoryInterface|null
+     */
+    public function getRepository()
+    {
+        return $this->repository;
     }
 
     /**
@@ -44,7 +57,7 @@ class EloquentRepositoryDataStore extends AbstractEloquentDataStore
      *
      * @return Model
      */
-    protected function getModel()
+    public function getModel()
     {
         $model = $this->repository->makeModel(false);
 
