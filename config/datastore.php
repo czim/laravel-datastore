@@ -71,6 +71,36 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | DataStore Class Map
+    |--------------------------------------------------------------------------
+    |
+    | Specific data store classes may be mapped based on the subject model
+    | class for which the store is created.
+    |
+    */
+
+    'store-mapping' => [
+
+        // Default mapping
+        'default' => [
+
+            // YourSubjectClassName::class => YourDataStoreClass::class,
+        ],
+
+        // If a mapping is not set for a specific driver,
+        // the above defined default mapping is used.
+        'drivers' => [
+
+            'model' => [
+
+                // YourSubjectClassName::class => YourDataStoreClass::class,
+            ],
+        ],
+
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Filtering
     |--------------------------------------------------------------------------
     |
