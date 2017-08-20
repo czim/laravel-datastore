@@ -30,10 +30,13 @@ class EloquentDataStore extends AbstractEloquentDataStore
      * Sets the model to use for accessing data.
      *
      * @param Model $model
+     * @return $this
      */
     public function setModel(Model $model)
     {
         $this->model = $model;
+
+        return $this;
     }
 
     /**
@@ -41,7 +44,7 @@ class EloquentDataStore extends AbstractEloquentDataStore
      *
      * @return Model
      */
-    protected function getModel()
+    public function getModel()
     {
         return $this->model;
     }
