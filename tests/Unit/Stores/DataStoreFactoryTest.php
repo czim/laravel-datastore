@@ -7,6 +7,8 @@ use Czim\DataStore\Contracts\Stores\Manipulation\DataManipulatorFactoryInterface
 use Czim\DataStore\Contracts\Stores\Manipulation\DataManipulatorInterface;
 use Czim\DataStore\Resource\JsonApi\JsonApiResourceAdapterFactory;
 use Czim\DataStore\Stores\DataStoreFactory;
+use Czim\DataStore\Test\Helpers\Stores\TestModelStore;
+use Czim\DataStore\Test\Helpers\Stores\TestRepositoryStore;
 use Czim\DataStore\Test\ProvisionedTestCase;
 use Czim\Repository\Contracts\BaseRepositoryInterface;
 use Illuminate\Database\Eloquent\Model;
@@ -221,6 +223,129 @@ class DataStoreFactoryTest extends ProvisionedTestCase
         $store = $factory->driver(null)->makeForObject($model);
 
         static::assertInstanceOf(DataStoreInterface::class, $store);
+    }
+
+
+    // ------------------------------------------------------------------------------
+    //      Mapping
+    // ------------------------------------------------------------------------------
+
+    /**
+     * @test
+     */
+    function it_uses_a_configured_mapped_store_class_for_a_model()
+    {
+        $factory = new DataStoreFactory;
+
+        $model = $this->getMockModel();
+
+        $this->app['config']->set('datastore.store-mapping.drivers.model.' . get_class($model), TestModelStore::class);
+
+        /** @var Mockery\Mock|JsonApiResourceAdapterFactory $adapterFactory */
+        $adapterFactory = Mockery::mock(JsonApiResourceAdapterFactory::class);
+        /** @var Mockery\Mock|ResourceAdapterInterface $adapter */
+        $adapter = Mockery::mock(ResourceAdapterInterface::class);
+
+        $adapterFactory->shouldReceive('makeForModel')->once()->with($model)->andReturn($adapter);
+
+        $this->app->instance(JsonApiResourceAdapterFactory::class, $adapterFactory);
+
+        $store = $factory->makeForObject($model);
+
+        static::assertInstanceOf(TestModelStore::class, $store);
+    }
+
+    /**
+     * @test
+     */
+    function it_uses_a_configured_mapped_store_class_for_a_model_with_default_fallback()
+    {
+        $factory = new DataStoreFactory;
+
+        $model = $this->getMockModel();
+
+        $this->app['config']->set('datastore.store-mapping.default.' . get_class($model), TestModelStore::class);
+
+        /** @var Mockery\Mock|JsonApiResourceAdapterFactory $adapterFactory */
+        $adapterFactory = Mockery::mock(JsonApiResourceAdapterFactory::class);
+        /** @var Mockery\Mock|ResourceAdapterInterface $adapter */
+        $adapter = Mockery::mock(ResourceAdapterInterface::class);
+
+        $adapterFactory->shouldReceive('makeForModel')->once()->with($model)->andReturn($adapter);
+
+        $this->app->instance(JsonApiResourceAdapterFactory::class, $adapterFactory);
+
+        $store = $factory->makeForObject($model);
+
+        static::assertInstanceOf(TestModelStore::class, $store);
+    }
+
+    /**
+     * @test
+     */
+    function it_uses_a_configured_mapped_store_class_for_a_repository()
+    {
+        $factory = new DataStoreFactory;
+
+        $model      = $this->getMockModel();
+        $repository = $this->getMockRepository();
+
+        $repository->shouldReceive('makeModel')->andReturn($model);
+
+        $this->app['config']->set('datastore.store-mapping.drivers.model.' . get_class($repository), TestRepositoryStore::class);
+
+        /** @var Mockery\Mock|JsonApiResourceAdapterFactory $adapterFactory */
+        $adapterFactory = Mockery::mock(JsonApiResourceAdapterFactory::class);
+        /** @var Mockery\Mock|ResourceAdapterInterface $adapter */
+        $adapter = Mockery::mock(ResourceAdapterInterface::class);
+
+        $adapterFactory->shouldReceive('makeForRepository')->once()->with($repository)->andReturn($adapter);
+
+        $this->app->instance(JsonApiResourceAdapterFactory::class, $adapterFactory);
+
+        $store = $factory->makeForObject($repository);
+
+        static::assertInstanceOf(TestRepositoryStore::class, $store);
+    }
+
+    /**
+     * @test
+     * @expectedException \RuntimeException
+     */
+    function it_throws_an_exception_if_a_mapped_model_store_does_not_implement_required_interface()
+    {
+        $factory = new DataStoreFactory;
+
+        $model = $this->getMockModel();
+
+        $this->app['config']->set('datastore.store-mapping.drivers.model.' . get_class($model), static::class);
+
+        /** @var Mockery\Mock|JsonApiResourceAdapterFactory $adapterFactory */
+        $adapterFactory = Mockery::mock(JsonApiResourceAdapterFactory::class);
+
+        $this->app->instance(JsonApiResourceAdapterFactory::class, $adapterFactory);
+
+        $factory->makeForObject($model);
+    }
+
+    /**
+     * @test
+     * @expectedException \RuntimeException
+     */
+    function it_throws_an_exception_if_a_mapped_repository_store_does_not_implement_required_interface()
+    {
+        $factory = new DataStoreFactory;
+
+        $repository = $this->getMockRepository();
+
+        $this->app['config']->set('datastore.store-mapping.drivers.model.' . get_class($repository), static::class);
+
+        /** @var Mockery\Mock|JsonApiResourceAdapterFactory $adapterFactory */
+        $adapterFactory = Mockery::mock(JsonApiResourceAdapterFactory::class);
+
+        $this->app->instance(JsonApiResourceAdapterFactory::class, $adapterFactory);
+
+        $factory->makeForObject($repository);
     }
 
 
