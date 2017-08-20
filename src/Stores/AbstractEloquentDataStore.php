@@ -258,6 +258,9 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
             $available = $this->resourceAdapter->availableSortKeys();
 
             $sorting = array_filter($sorting, function ($attribute) use ($available) {
+                if ($attribute instanceof SortKey) {
+                    return in_array($attribute->getKey(), $available);
+                }
                 // @codeCoverageIgnoreStart
                 return in_array($attribute, $available);
                 // @codeCoverageIgnoreEnd
