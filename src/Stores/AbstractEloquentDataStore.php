@@ -163,7 +163,9 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
 
         if ($context->shouldBePaginated()) {
 
-            $total = (clone $query)->count();
+            $clonedQuery = clone $query;
+
+            $total = $clonedQuery->count();
             $page  = max($context->pageNumber(), 1);
             $size  = $context->pageSize() ?: $this->defaultPageSize;
 
