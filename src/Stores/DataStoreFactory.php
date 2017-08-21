@@ -101,6 +101,7 @@ class DataStoreFactory implements DataStoreFactoryInterface
 
         $store
             ->setResourceAdapter($adapterFactory->makeForModel($model))
+            ->setResourceAdapterFactory($adapterFactory)
             ->setStrategyDriver($this->getDatabaseDriverString());
 
         $store->setModel($model);
@@ -139,6 +140,7 @@ class DataStoreFactory implements DataStoreFactoryInterface
 
         $store
             ->setResourceAdapter($adapterFactory->makeForRepository($repository))
+            ->setResourceAdapterFactory($adapterFactory)
             ->setStrategyDriver($this->getDatabaseDriverString());
 
         $store->setRepository($repository);

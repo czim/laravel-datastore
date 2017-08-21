@@ -57,8 +57,10 @@ class EloquentDataStore extends AbstractEloquentDataStore implements EloquentMod
      */
     protected function retrieveQuery()
     {
+        $includes = $this->resolveIncludesForEagerLoading($this->includes);
+
         return $this->model->query()
-            ->with($this->includes);
+            ->with($includes);
     }
 
     /**
@@ -70,7 +72,6 @@ class EloquentDataStore extends AbstractEloquentDataStore implements EloquentMod
     protected function retrieveById($id)
     {
         return $this->retrieveQuery()
-            ->with($this->includes)
             ->where($this->model->getQualifiedKeyName(), $id)
             ->first();
     }
@@ -84,7 +85,6 @@ class EloquentDataStore extends AbstractEloquentDataStore implements EloquentMod
     protected function retrieveManyById(array $ids)
     {
         return $this->retrieveQuery()
-            ->with($this->includes)
             ->whereIn($this->model->getQualifiedKeyName(), $ids)
             ->get();
     }

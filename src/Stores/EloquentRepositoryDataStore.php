@@ -80,7 +80,9 @@ class EloquentRepositoryDataStore extends AbstractEloquentDataStore implements E
      */
     protected function retrieveQuery()
     {
-        $this->repository->pushCriteriaOnce(new WithRelations($this->includes), CriteriaKey::WITH);
+        $includes = $this->resolveIncludesForEagerLoading($this->includes);
+
+        $this->repository->pushCriteriaOnce(new WithRelations($includes), CriteriaKey::WITH);
 
         return $this->repository->query();
     }
@@ -93,7 +95,9 @@ class EloquentRepositoryDataStore extends AbstractEloquentDataStore implements E
      */
     protected function retrieveById($id)
     {
-        $this->repository->pushCriteriaOnce(new WithRelations($this->includes), CriteriaKey::WITH);
+        $includes = $this->resolveIncludesForEagerLoading($this->includes);
+
+        $this->repository->pushCriteriaOnce(new WithRelations($includes), CriteriaKey::WITH);
 
         return $this->repository->find($id);
     }
