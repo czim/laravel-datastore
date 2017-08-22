@@ -6,9 +6,12 @@ use Czim\DataStore\Contracts\Stores\DataStoreFactoryInterface;
 use Czim\DataStore\Contracts\Stores\DataStoreInterface;
 use Czim\DataStore\Contracts\Stores\EloquentModelDataStoreInterface;
 use Czim\DataStore\Contracts\Stores\EloquentRepositoryDataStoreInterface;
+use Czim\DataStore\Contracts\Stores\Includes\IncludeResolverInterface;
 use Czim\DataStore\Contracts\Stores\Manipulation\DataManipulatorFactoryInterface;
 use Czim\DataStore\Contracts\Stores\Manipulation\DataManipulatorInterface;
+use Czim\DataStore\Stores\Includes\IncludeResolver;
 use Czim\Repository\Contracts\BaseRepositoryInterface;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use RuntimeException;
 use UnexpectedValueException;
@@ -101,8 +104,15 @@ class DataStoreFactory implements DataStoreFactoryInterface
 
         $store
             ->setResourceAdapter($adapterFactory->makeForModel($model))
-            ->setResourceAdapterFactory($adapterFactory)
             ->setStrategyDriver($this->getDatabaseDriverString());
+
+        if ($resolver = $this->getIncludeResolverForObject($model)) {
+
+            $resolver->setResourceAdapterFactory($adapterFactory);
+
+
+            $store->setIncludeResolver($resolver);
+        }
 
         $store->setModel($model);
 
@@ -140,8 +150,14 @@ class DataStoreFactory implements DataStoreFactoryInterface
 
         $store
             ->setResourceAdapter($adapterFactory->makeForRepository($repository))
-            ->setResourceAdapterFactory($adapterFactory)
             ->setStrategyDriver($this->getDatabaseDriverString());
+
+        if ($resolver = $this->getIncludeResolverForObject($repository)) {
+
+            $resolver->setResourceAdapterFactory($adapterFactory);
+
+            $store->setIncludeResolver($resolver);
+        }
 
         $store->setRepository($repository);
 
@@ -276,6 +292,29 @@ class DataStoreFactory implements DataStoreFactoryInterface
     protected function getDataManipulatorFactoryClass()
     {
         return config("datastore.drivers.datastore.drivers.{$this->getDriverString()}.manipulator-factory");
+    }
+
+    /**
+     * @param object $object
+     * @return IncludeResolverInterface
+     */
+    protected function getIncludeResolverForObject($object)
+    {
+        if ($object instanceof BaseRepositoryInterface) {
+            $object = $object->makeModel(false);
+
+            // @codeCoverageIgnoreStart
+            if ($object instanceof Builder) {
+                $object = $object->getModel();
+            }
+            // @codeCoverageIgnoreEnd
+        }
+
+        if ( ! ($object instanceof Model)) {
+            throw new RuntimeException('Unsupported object for building include resolver');
+        }
+
+        return app(IncludeResolver::class);
     }
 
     /**

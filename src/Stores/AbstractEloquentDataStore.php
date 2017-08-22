@@ -8,6 +8,7 @@ use Czim\DataStore\Contracts\Resource\ResourceAdapterFactoryInterface;
 use Czim\DataStore\Contracts\Resource\ResourceAdapterInterface;
 use Czim\DataStore\Contracts\Stores\DataStoreInterface;
 use Czim\DataStore\Contracts\Stores\Filtering\FilterStrategyFactoryInterface;
+use Czim\DataStore\Contracts\Stores\Includes\IncludeResolverInterface;
 use Czim\DataStore\Contracts\Stores\Manipulation\DataManipulatorInterface;
 use Czim\DataStore\Contracts\Stores\Sorting\SortStrategyFactoryInterface;
 use Czim\DataStore\Enums\FilterStrategyEnum;
@@ -29,9 +30,9 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
     protected $resourceAdapter;
 
     /**
-     * @var ResourceAdapterFactoryInterface
+     * @var IncludeResolverInterface
      */
-    protected $resourceAdapterFactory;
+    protected $includeResolver;
 
     /**
      * @var DataManipulatorInterface|null
@@ -85,14 +86,14 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
     }
 
     /**
-     * Sets the resource adapter factory.
+     * Sets the include resolver.
      *
-     * @param ResourceAdapterFactoryInterface $adapterFactory
+     * @param IncludeResolverInterface $resolver
      * @return $this
      */
-    public function setResourceAdapterFactory(ResourceAdapterFactoryInterface $adapterFactory)
+    public function setIncludeResolver(IncludeResolverInterface $resolver)
     {
-        $this->resourceAdapterFactory = $adapterFactory;
+        $this->includeResolver = $resolver;
 
         return $this;
     }
@@ -411,128 +412,7 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
             return [];
         }
 
-        $includesTree = $this->explodeIncludesToNestedArray($includes);
-
-        $resolvedTree = $this->recursivelyResolveEagerLoadingIncludes(
-            $this->getModel(),
-            $this->resourceAdapter,
-            $includesTree
-        );
-
-        return array_dot($resolvedTree);
-    }
-
-    /**
-     * Returns a fully resolved nested tree of includes.
-     *
-     * @param Model                    $model
-     * @param ResourceAdapterInterface $adapter
-     * @param array                    $includesTree
-     * @return array
-     */
-    protected function recursivelyResolveEagerLoadingIncludes(
-        Model $model,
-        ResourceAdapterInterface $adapter,
-        array $includesTree
-    ) {
-        if (empty($includesTree)) {
-            return [];
-        }
-
-        // If no adapter factory is set, we can't convert and
-        // must assume that includes don't need to be converted.
-        if ( ! $this->resourceAdapterFactory) {
-            return $includesTree;
-        }
-
-        $resolved = [];
-
-        foreach (array_keys($includesTree) as $include) {
-
-            $relationMethod = $adapter->dataKeyForInclude($include);
-
-            if ( ! $relationMethod) {
-                continue;
-            }
-
-            // Remember the resolved method for inclusion
-            $resolved[ $relationMethod ] = [];
-
-            // If no further nesting, skip
-            if (empty($includesTree[ $include ])) {
-                continue;
-            }
-
-            // Get the model for the included relation
-            try {
-                $relation = $model->{$relationMethod}();
-
-            } catch (\Exception $e) {
-
-                throw new RuntimeException(
-                    "Failed to resolve nested include '{$include}' using relation method '{$relationMethod}'"
-                    . " on Model '" . get_class($model) . "'.",
-                    $e->getCode(),
-                    $e
-                );
-            }
-
-            if ( ! ($relation instanceof Relation)) {
-                throw new RuntimeException(
-                    "nested include '{$include}' using relation method '{$relationMethod}'  on Model '"
-                    . get_class($model) . "' is not an Eloquent relation method."
-                );
-            }
-
-            $relatedModel = $relation->getRelated();
-
-            if ( ! $relatedModel) {
-                continue;
-            }
-
-            $relatedAdapter = $this->resourceAdapterFactory->makeForModel($relatedModel);
-
-            if ( ! $relatedAdapter) {
-                continue;
-            }
-
-            // Recursively handle the resolution and build the tree
-            $resolved[ $relationMethod ] = $this->recursivelyResolveEagerLoadingIncludes(
-                $relatedModel,
-                $relatedAdapter,
-                $includesTree[ $include ]
-            );
-        }
-
-        return $resolved;
-    }
-
-    /**
-     * Explodes a list of dot-notated includes to a nested array tree.
-     *
-     * @param array $includes
-     * @return array
-     */
-    protected function explodeIncludesToNestedArray(array $includes)
-    {
-        $exploded = [];
-
-        foreach ($includes as $key) {
-            array_set($exploded, $key, []);
-        }
-
-        return $exploded;
-    }
-
-    /**
-     * Makes and returns a resource adapter instance for a given model instance.
-     *
-     * @param Model $model
-     * @return ResourceAdapterInterface
-     */
-    protected function getResourceAdapterForModel(Model $model)
-    {
-        return $this->resourceAdapterFactory->makeForModel($model);
+        return $this->includeResolver->resolve($includes);
     }
 
 
@@ -553,6 +433,9 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
             throw new FeatureNotSupportedException('No manipulator set');
         }
 
+        // Convert JSON-API attributes to data attributes
+        // todo
+
         return $this->manipulator->create($data);
     }
 
@@ -569,6 +452,9 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
         if (null === $this->manipulator) {
             throw new FeatureNotSupportedException('No manipulator set');
         }
+
+        // Convert JSON-API attributes to data attributes
+        // todo
 
         return $this->manipulator->updateById($id, $data);
     }
@@ -601,6 +487,7 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
      */
     public function attachAsRelated($id, $include, array $ids, $detaching = false)
     {
+        // todo
         if (null === $this->manipulator) {
             throw new FeatureNotSupportedException('No manipulator set');
         }
@@ -621,6 +508,7 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
      */
     public function detachAsRelated($id, $include, array $ids)
     {
+        // todo
         if (null === $this->manipulator) {
             throw new FeatureNotSupportedException('No manipulator set');
         }

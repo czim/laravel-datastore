@@ -1,8 +1,8 @@
 <?php
 namespace Czim\DataStore\Contracts\Stores;
 
-use Czim\DataStore\Contracts\Resource\ResourceAdapterFactoryInterface;
 use Czim\DataStore\Contracts\Resource\ResourceAdapterInterface;
+use Czim\DataStore\Contracts\Stores\Includes\IncludeResolverInterface;
 use Czim\DataStore\Contracts\Stores\Manipulation\DataManipulatorInterface;
 
 /**
@@ -23,12 +23,12 @@ interface DataStoreInterface extends DataStoreRetrieveInterface, DataStoreUpdate
     public function setResourceAdapter(ResourceAdapterInterface $resourceAdapter);
 
     /**
-     * Sets the resource adapter factory.
+     * Sets the include resolver.
      *
-     * @param ResourceAdapterFactoryInterface $adapterFactory
+     * @param IncludeResolverInterface $resolver
      * @return $this
      */
-    public function setResourceAdapterFactory(ResourceAdapterFactoryInterface $adapterFactory);
+    public function setIncludeResolver(IncludeResolverInterface $resolver);
 
     /**
      * Sets the database strategy driver key.
