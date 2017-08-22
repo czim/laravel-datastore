@@ -3,6 +3,8 @@ namespace Czim\DataStore\Test;
 
 use Czim\DataStore\Providers\DataStoreServiceProvider;
 use Czim\DataStore\Test\Helpers\Models\TestModel;
+use Czim\DataStore\Test\Helpers\Models\TestMorphRelatedModel;
+use Czim\DataStore\Test\Helpers\Models\TestRelatedModel;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
 
@@ -70,6 +72,29 @@ abstract class ProvisionedTestCase extends TestCase
     }
 
     /**
+     * Sets up the database for relational testing.
+     */
+    protected function setUpRelatedDatabase()
+    {
+        Schema::create('test_related_models', function($table) {
+            /** @var Blueprint $table */
+            $table->increments('id');
+            $table->string('name', 255)->nullable();
+            $table->integer('test_model_id')->unsigned()->nullable();
+            $table->nullableTimestamps();
+        });
+
+        Schema::create('test_morph_related_models', function($table) {
+            /** @var Blueprint $table */
+            $table->increments('id');
+            $table->string('name', 255)->nullable();
+            $table->integer('morphable_id')->unsigned()->nullable();
+            $table->string('morphable_type', 255)->nullable();
+            $table->nullableTimestamps();
+        });
+    }
+
+    /**
      * @return TestModel
      */
     protected function createTestModel()
@@ -77,6 +102,36 @@ abstract class ProvisionedTestCase extends TestCase
         return TestModel::create([
             'name' => 'testing default name',
         ]);
+    }
+
+    /**
+     * @return TestModel
+     */
+    protected function createRelatedTestModel()
+    {
+        /** @var TestModel $model */
+        $model = TestModel::create([
+            'name' => 'testing default name',
+        ]);
+
+        TestRelatedModel::create([
+            'name'          => 'Related One',
+            'test_model_id' => $model->id,
+        ]);
+
+        TestRelatedModel::create([
+            'name'          => 'Related Two',
+            'test_model_id' => $model->id,
+        ]);
+
+        /** @var TestMorphRelatedModel $morph */
+        $morph = new TestMorphRelatedModel([
+            'name' => 'Morph One',
+        ]);
+
+        $model->testMorphRelatedModels()->save($morph);
+
+        return $model;
     }
 
 }

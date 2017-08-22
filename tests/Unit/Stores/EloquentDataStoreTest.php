@@ -3,9 +3,11 @@ namespace Czim\DataStore\Test\Unit\Stores;
 
 use Czim\DataStore\Context\RequestContext;
 use Czim\DataStore\Context\SortKey;
+use Czim\DataStore\Contracts\Resource\ResourceAdapterFactoryInterface;
 use Czim\DataStore\Contracts\Resource\ResourceAdapterInterface;
 use Czim\DataStore\Contracts\Stores\Filtering\FilterStrategyFactoryInterface;
 use Czim\DataStore\Contracts\Stores\Filtering\FilterStrategyInterface;
+use Czim\DataStore\Contracts\Stores\Includes\IncludeResolverInterface;
 use Czim\DataStore\Contracts\Stores\Manipulation\DataManipulatorInterface;
 use Czim\DataStore\Contracts\Stores\Sorting\SortStrategyFactoryInterface;
 use Czim\DataStore\Contracts\Stores\Sorting\SortStrategyInterface;
@@ -277,6 +279,35 @@ class EloquentDataStoreTest extends ProvisionedTestCase
         static::assertEquals(1, $result->items()[0]->id);
     }
 
+    /**
+     * @test
+     */
+    function it_resolves_include_relations_for_find_by_id()
+    {
+        $this->setUpRelatedDatabase();
+
+        $model = $this->createRelatedTestModel();
+
+        $adapter  = $this->getMockAdapter();
+        $resolver = $this->getMockIncludeResolver();
+
+        $store = new EloquentDataStore;
+
+        $store->setModel(new TestModel);
+        $store->setResourceAdapter($adapter);
+        $store->setIncludeResolver($resolver);
+
+        $resolver->shouldReceive('resolve')->with(['relation', 'another'])->andReturn(['testRelatedModels', 'testMorphRelatedModels']);
+
+        /** @var TestModel $result */
+        $result = $store->getById($model->getKey(), ['relation', 'another']);
+
+        static::assertInstanceOf(TestModel::class, $result);
+        static::assertEquals($model->getKey(), $result->getKey());
+        static::assertTrue($result->relationLoaded('testRelatedModels'), 'Eager loading not applied');
+        static::assertTrue($result->relationLoaded('testMorphRelatedModels'), 'Eager loading not applied');
+    }
+    
 
     // ------------------------------------------------------------------------------
     //      Manipulation (passthru)
@@ -380,6 +411,14 @@ class EloquentDataStoreTest extends ProvisionedTestCase
     protected function getMockAdapter()
     {
         return Mockery::mock(ResourceAdapterInterface::class);
+    }
+
+    /**
+     * @return Mockery\MockInterface|Mockery\Mock|IncludeResolverInterface
+     */
+    protected function getMockIncludeResolver()
+    {
+        return Mockery::mock(IncludeResolverInterface::class);
     }
 
     /**
