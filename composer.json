@@ -28,7 +28,8 @@
         "orchestra/testbench": "~3.4",
         "orchestra/database": "~3.4",
         "satooshi/php-coveralls": "^1.0",
-        "czim/laravel-repository": "1.4.*"
+        "czim/laravel-repository": "1.4.*",
+        "doctrine/dbal": "^2.6"
     },
     "autoload": {
         "psr-4": {
