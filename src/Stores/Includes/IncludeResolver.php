@@ -91,9 +91,11 @@ class IncludeResolver implements IncludeResolverInterface
         ResourceAdapterInterface $adapter,
         array $includesTree
     ) {
+        // @codeCoverageIgnoreStart
         if (empty($includesTree)) {
             return [];
         }
+        // @codeCoverageIgnoreEnd
 
         $resolved = [];
 
@@ -136,9 +138,11 @@ class IncludeResolver implements IncludeResolverInterface
 
             $relatedModel = $relation->getRelated();
 
+            // @codeCoverageIgnoreStart
             if ( ! $relatedModel) {
                 continue;
             }
+            // @codeCoverageIgnoreEnd
 
             $relatedAdapter = $this->getResourceAdapterForModel($relatedModel);
 
