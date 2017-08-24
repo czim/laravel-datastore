@@ -49,11 +49,14 @@ class IncludeResolver implements IncludeResolverInterface
      *
      * @param Model                         $model
      * @param ResourceAdapterInterface|null $adapter
+     * @return $this
      */
     public function setModel(Model $model, ResourceAdapterInterface $adapter = null)
     {
         $this->model   = $model;
         $this->adapter = $adapter ?: $this->adapterFactory->makeForModel($model);
+
+        return $this;
     }
 
     /**
