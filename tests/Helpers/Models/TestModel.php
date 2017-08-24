@@ -1,6 +1,7 @@
 <?php
 namespace Czim\DataStore\Test\Helpers\Models;
 
+use Exception;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -26,6 +27,16 @@ class TestModel extends Model
     public function testMorphRelatedModels()
     {
         return $this->morphMany(TestMorphRelatedModel::class, 'morphable');
+    }
+
+    public function notARelation()
+    {
+        return false;
+    }
+
+    public function throwsAnException()
+    {
+        throw new Exception('testing');
     }
 
 }

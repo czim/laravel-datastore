@@ -26,4 +26,14 @@ class TestMorphRelatedModel extends Model
         return $this->morphTo();
     }
 
+    /**
+     * Fake relationship for testing
+     *
+     * @return \Illuminate\Database\Eloquent\Relations\BelongsTo
+     */
+    public function testParent()
+    {
+        return $this->belongsTo(TestModel::class, 'morphable_id');
+    }
+
 }
