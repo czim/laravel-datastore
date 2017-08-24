@@ -75,7 +75,7 @@ class IncludeResolver implements IncludeResolverInterface
 
         $resolvedTree = $this->recursivelyResolveEagerLoadingIncludes($this->model, $this->adapter, $includesTree);
 
-        return array_dot($resolvedTree);
+        return array_keys(array_dot($resolvedTree));
     }
 
     /**
@@ -140,7 +140,7 @@ class IncludeResolver implements IncludeResolverInterface
                 continue;
             }
 
-            $relatedAdapter = $this->adapterFactory->makeForModel($relatedModel);
+            $relatedAdapter = $this->getResourceAdapterForModel($relatedModel);
 
             if ( ! $relatedAdapter) {
                 continue;
