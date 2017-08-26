@@ -433,8 +433,7 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
             throw new FeatureNotSupportedException('No manipulator set');
         }
 
-        // Convert JSON-API attributes to data attributes
-        // todo
+        $data = $this->convertResourceAttributesToDataKeys($data);
 
         return $this->manipulator->create($data);
     }
@@ -453,8 +452,7 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
             throw new FeatureNotSupportedException('No manipulator set');
         }
 
-        // Convert JSON-API attributes to data attributes
-        // todo
+        $data = $this->convertResourceAttributesToDataKeys($data);
 
         return $this->manipulator->updateById($id, $data);
     }
@@ -516,6 +514,24 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
         $relation = $this->resourceAdapter->dataKeyForInclude($include);
 
         return $this->manipulator->detachAsRelated($id, $relation, $ids);
+    }
+
+    /**
+     * Converts keys from resource to data for a given data object.
+     *
+     * @param DataObjectInterface $data
+     * @return DataObjectInterface
+     */
+    protected function convertResourceAttributesToDataKeys(DataObjectInterface $data)
+    {
+        $resolvedData  = clone $data;
+        $resolvedData->clear();
+
+        foreach ($data->getKeys() as $key) {
+            $resolvedData[ $this->resourceAdapter->dataKeyForAttribute($key) ] = $data->getAttribute($key);
+        }
+
+        return $resolvedData;
     }
 
 
