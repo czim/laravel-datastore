@@ -310,9 +310,11 @@ class DataStoreFactory implements DataStoreFactoryInterface
             // @codeCoverageIgnoreEnd
         }
 
+        // @codeCoverageIgnoreStart
         if ( ! ($object instanceof Model)) {
             throw new RuntimeException('Unsupported object for building include resolver');
         }
+        // @codeCoverageIgnoreEnd
 
         return app(IncludeResolver::class);
     }
