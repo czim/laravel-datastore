@@ -4,7 +4,6 @@ namespace Czim\DataStore\Stores\Manipulation;
 use Czim\DataObject\Contracts\DataObjectInterface;
 use Czim\Repository\Contracts\BaseRepositoryInterface;
 use Illuminate\Database\Eloquent\Builder;
-use Illuminate\Database\Eloquent\Model;
 
 class EloquentRepositoryManipulator extends EloquentModelManipulator
 {

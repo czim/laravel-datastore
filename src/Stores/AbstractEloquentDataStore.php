@@ -4,7 +4,6 @@ namespace Czim\DataStore\Stores;
 use Czim\DataObject\Contracts\DataObjectInterface;
 use Czim\DataStore\Context\SortKey;
 use Czim\DataStore\Contracts\Context\ContextInterface;
-use Czim\DataStore\Contracts\Resource\ResourceAdapterFactoryInterface;
 use Czim\DataStore\Contracts\Resource\ResourceAdapterInterface;
 use Czim\DataStore\Contracts\Stores\DataStoreInterface;
 use Czim\DataStore\Contracts\Stores\Filtering\FilterStrategyFactoryInterface;
@@ -16,10 +15,8 @@ use Czim\DataStore\Enums\SortStrategyEnum;
 use Czim\DataStore\Exceptions\FeatureNotSupportedException;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
-use RuntimeException;
 
 abstract class AbstractEloquentDataStore implements DataStoreInterface
 {
