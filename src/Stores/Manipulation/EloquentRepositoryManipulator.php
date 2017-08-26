@@ -55,9 +55,11 @@ class EloquentRepositoryManipulator extends EloquentModelManipulator
     {
         $model = $this->repository->makeModel(false);
 
+        // @codeCoverageIgnoreStart
         if ($model instanceof Builder) {
             $model = $this->getModel();
         }
+        // @codeCoverageIgnoreEnd
 
         $model->fill($data->toArray());
 
