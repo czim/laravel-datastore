@@ -82,6 +82,32 @@ class EloquentRepositoryManipulatorTest extends ProvisionedTestCase
      * @test
      * @depends it_takes_the_model_as_an_instance
      */
+    function it_make_a_new_model_without_persisting()
+    {
+        $manipulator = new EloquentRepositoryManipulator;
+
+        $repository = $this->getMockRepository();
+
+        $manipulator->setModel(new TestModel);
+        $manipulator->setRepository($repository);
+
+        /** @var TestModel $model */
+        $model = new TestModel;
+        $data  = new TestData(['name' => 'test model']);
+
+        $repository->shouldReceive('makeModel')->once()->with(false)->andReturn($model);
+
+        /** @var TestModel $model */
+        $createdModel = $manipulator->make($data);
+
+        static::assertSame($model, $createdModel);
+        static::assertEquals('test model', $model->name);
+    }
+
+    /**
+     * @test
+     * @depends it_takes_the_model_as_an_instance
+     */
     function it_updates_an_existing_model()
     {
         $manipulator = new EloquentRepositoryManipulator;
