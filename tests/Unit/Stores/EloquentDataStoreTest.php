@@ -1,9 +1,9 @@
 <?php
 namespace Czim\DataStore\Test\Unit\Stores;
 
+use Czim\DataObject\Contracts\DataObjectInterface;
 use Czim\DataStore\Context\RequestContext;
 use Czim\DataStore\Context\SortKey;
-use Czim\DataStore\Contracts\Resource\ResourceAdapterFactoryInterface;
 use Czim\DataStore\Contracts\Resource\ResourceAdapterInterface;
 use Czim\DataStore\Contracts\Stores\Filtering\FilterStrategyFactoryInterface;
 use Czim\DataStore\Contracts\Stores\Filtering\FilterStrategyInterface;
@@ -323,9 +323,15 @@ class EloquentDataStoreTest extends ProvisionedTestCase
         $model = $this->createTestModel();
         $data = new TestData(['test' => true]);
 
-        $manipulator = $this->getMockManipulator();
-        $manipulator->shouldReceive('create')->once()->with($data)->andReturn($model);
+        $adapter = $this->getMockAdapter();
+        $adapter->shouldReceive('dataKeyForAttribute')->once()->with('test')->andReturn('converted');
 
+        $manipulator = $this->getMockManipulator();
+        $manipulator->shouldReceive('create')->once()
+            ->with(Mockery::type(DataObjectInterface::class))
+            ->andReturn($model);
+
+        $store->setResourceAdapter($adapter);
         $store->setManipulator($manipulator);
 
         static::assertSame($model, $store->create($data));
@@ -345,15 +351,56 @@ class EloquentDataStoreTest extends ProvisionedTestCase
     /**
      * @test
      */
+    function it_passes_make_through_to_manipulator()
+    {
+        $store = new EloquentDataStore;
+
+        $model = $this->createTestModel();
+        $data = new TestData(['test' => true]);
+
+        $adapter = $this->getMockAdapter();
+        $adapter->shouldReceive('dataKeyForAttribute')->once()->with('test')->andReturn('converted');
+
+        $manipulator = $this->getMockManipulator();
+        $manipulator->shouldReceive('make')->once()
+            ->with(Mockery::type(DataObjectInterface::class))
+            ->andReturn($model);
+
+        $store->setResourceAdapter($adapter);
+        $store->setManipulator($manipulator);
+
+        static::assertSame($model, $store->make($data));
+    }
+
+    /**
+     * @test
+     * @expectedException \Czim\DataStore\Exceptions\FeatureNotSupportedException
+     */
+    function it_throws_an_exception_for_make_if_no_manipulator_is_set()
+    {
+        $store = new EloquentDataStore;
+
+        $store->make(new TestData(['test' => true]));
+    }
+
+    /**
+     * @test
+     */
     function it_passes_update_through_to_manipulator()
     {
         $store = new EloquentDataStore;
 
         $data = new TestData(['test' => true]);
 
-        $manipulator = $this->getMockManipulator();
-        $manipulator->shouldReceive('updateById')->once()->with(1, $data)->andReturn(true);
+        $adapter = $this->getMockAdapter();
+        $adapter->shouldReceive('dataKeyForAttribute')->once()->with('test')->andReturn('converted');
 
+        $manipulator = $this->getMockManipulator();
+        $manipulator->shouldReceive('updateById')->once()
+            ->with(1, Mockery::type(DataObjectInterface::class))
+            ->andReturn(true);
+
+        $store->setResourceAdapter($adapter);
         $store->setManipulator($manipulator);
 
         static::assertTrue($store->updateById(1, $data));
