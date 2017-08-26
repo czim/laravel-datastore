@@ -3,6 +3,8 @@ namespace Czim\DataStore\Stores\Manipulation;
 
 use Czim\DataObject\Contracts\DataObjectInterface;
 use Czim\Repository\Contracts\BaseRepositoryInterface;
+use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Model;
 
 class EloquentRepositoryManipulator extends EloquentModelManipulator
 {
@@ -42,6 +44,25 @@ class EloquentRepositoryManipulator extends EloquentModelManipulator
     public function create(DataObjectInterface $data)
     {
         return $this->repository->create($data->toArray());
+    }
+
+    /**
+     * Makes a record without persisting it.
+     *
+     * @param DataObjectInterface $data
+     * @return false|mixed
+     */
+    public function make(DataObjectInterface $data)
+    {
+        $model = $this->repository->makeModel(false);
+
+        if ($model instanceof Builder) {
+            $model = $this->getModel();
+        }
+
+        $model->fill($data->toArray());
+
+        return $model;
     }
 
     /**

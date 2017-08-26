@@ -439,6 +439,24 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
     }
 
     /**
+     * Makes a record without persisting it.
+     *
+     * @param DataObjectInterface $data
+     * @return false|mixed
+     * @throws FeatureNotSupportedException
+     */
+    public function make(DataObjectInterface $data)
+    {
+        if (null === $this->manipulator) {
+            throw new FeatureNotSupportedException('No manipulator set');
+        }
+
+        $data = $this->convertResourceAttributesToDataKeys($data);
+
+        return $this->manipulator->make($data);
+    }
+
+    /**
      * Updates a record by ID with given JSON-API data.
      *
      * @param mixed               $id

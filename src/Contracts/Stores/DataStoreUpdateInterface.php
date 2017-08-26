@@ -15,6 +15,14 @@ interface DataStoreUpdateInterface
     public function create(DataObjectInterface $data);
 
     /**
+     * Makes a record without persisting it.
+     *
+     * @param DataObjectInterface $data
+     * @return false|mixed
+     */
+    public function make(DataObjectInterface $data);
+
+    /**
      * Updates a record by ID with given JSON-API data.
      *
      * @param string $id

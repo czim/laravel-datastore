@@ -81,6 +81,19 @@ class EloquentModelManipulator implements DataManipulatorInterface
     }
 
     /**
+     * Makes a record without persisting it.
+     *
+     * @param DataObjectInterface $data
+     * @return false|mixed
+     */
+    public function make(DataObjectInterface $data)
+    {
+        $model = get_class($this->model);
+
+        return new $model($data->toArray());
+    }
+
+    /**
      * Updates a record by ID with given JSON-API data.
      *
      * @param mixed               $id
