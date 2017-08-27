@@ -40,24 +40,34 @@ interface DataStoreUpdateInterface
     public function deleteById($id);
 
     /**
-     * Attaches records as related to a given record.
+     * Attaches or replaces records for a relationship.
      *
-     * @param mixed  $id
-     * @param string $relation
-     * @param array  $ids
-     * @param bool   $detaching
+     * @param mixed         $parent
+     * @param string        $relation
+     * @param mixed|mixed[] $records
+     * @param bool          $detaching  if true, everything but the given records are detached
      * @return bool
      */
-    public function attachAsRelated($id, $relation, array $ids, $detaching = false);
+    public function attachRelatedRecords($parent, $relation, $records, $detaching = false);
 
     /**
-     * Detaches records as related to a given record.
+     * Detaches records by ID for a relationship.
      *
-     * @param mixed  $id
-     * @param string $relation
-     * @param array  $ids
+     * @param mixed         $parent
+     * @param string        $relation
+     * @param mixed|mixed[] $records
      * @return bool
      */
-    public function detachAsRelated($id, $relation, array $ids);
+    public function detachRelatedRecords($parent, $relation, $records);
+
+    /**
+     * Detaches records by ID for a relationship.
+     *
+     * @param mixed         $parent
+     * @param string        $relation
+     * @param mixed|mixed[] $ids
+     * @return bool
+     */
+    public function detachRelatedRecordsById($parent, $relation, $ids);
 
 }

@@ -3,8 +3,16 @@ namespace Czim\DataStore\Stores\Manipulation;
 
 use Czim\DataObject\Contracts\DataObjectInterface;
 use Czim\DataStore\Contracts\Stores\Manipulation\DataManipulatorInterface;
+use Czim\DataStore\Exceptions\RelationReplaceDisallowedException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphOne;
+use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Support\Collection;
+use InvalidArgumentException;
 
 class EloquentModelManipulator implements DataManipulatorInterface
 {
@@ -128,30 +136,250 @@ class EloquentModelManipulator implements DataManipulatorInterface
     }
 
     /**
-     * Attaches records as related to a given record.
+     * Attaches or replaces records for a relationship.
      *
-     * @param mixed  $id
-     * @param string $relation
-     * @param array  $ids
-     * @param bool   $detaching
+     * @param mixed|Model              $parent
+     * @param string                   $relation
+     * @param mixed|Collection|Model[] $records
+     * @param bool                     $detaching   if true, everything but the given records are detached
      * @return bool
+     * @throws RelationReplaceDisallowedException
      */
-    public function attachAsRelated($id, $relation, array $ids, $detaching = false)
+    public function attachRelatedRecords($parent, $relation, $records, $detaching = false)
     {
-        // TODO: Implement attachAsRelated() method.
+        $this->verifyParentArgument($parent);
+        $this->verifyArrayableArgument($records);
+
+        $relationInstance = $this->getRelationForMethodName($relation, $parent);
+        $singular         = $this->isRelationSingular($relationInstance);
+        $deleting         = $this->shouldDeleteOnDetach($relation);
+
+        if ($singular) {
+            // Normalized the single record to a single related record;
+            if (is_array($records)) {
+                $related = array_first($records);
+            } elseif ($records instanceof Collection) {
+                $related = $records->first();
+            } else {
+                $related = $records;
+            }
+
+            if ( ! ($related instanceof Model) && null !== $related) {
+                throw new InvalidArgumentException("Singular relation record cannot be resolved to single model.");
+            }
+
+            // If the relationship is a belongs-to, the related model must be persisted
+            // and the parent model must be updated aswell.
+            if ($relationInstance instanceof BelongsTo || $relationInstance instanceof MorphTo) {
+
+                if ($related && ! $related->exists) {
+                    $related->save();
+                }
+
+                if (null === $related) {
+                    $parent->{$relation}()->dissociate($related);
+                } else {
+                    $parent->{$relation}()->associate($related);
+                }
+
+                return $parent->save();
+            }
+
+
+            // If the relationship is a has-one, any previously attached model
+            // will be replaced by a new one, or disconnected if nullified.
+            /** @var Model|null $previousRelated */
+            $previousRelated = $parent->exists ? $parent->{$relation}()->first() : null;
+
+            $different = (  ! (null === $previousRelated && null === $related)
+                        ||  $previousRelated && null === $related
+                        ||  $related && null === $previousRelated
+                        ||  get_class($previousRelated) !== get_class($related)
+                        ||  $previousRelated->getKey() !== $related->getKey()
+                        );
+
+            if ( ! $different) {
+                return true;
+            }
+
+            if (null !== $related) {
+                $parent->{$relation}()->save($related);
+            }
+
+            // Handle the detached record, which may either be deleted,
+            // or have its foreign keys nullified.
+            if (null !== $previousRelated) {
+                if ($deleting && ! $previousRelated->delete()) {
+                    return false;
+                }
+
+                if ($relationInstance instanceof HasOne) {
+                    $previousRelated->{$relationInstance->getForeignKeyName()} = null;
+                    return $previousRelated->save();
+                }
+
+                if ($relationInstance instanceof MorphOne) {
+                    $previousRelated->{$relationInstance->getMorphType()} = null;
+                    $previousRelated->{$relationInstance->getForeignKeyName()} = null;
+                    return $previousRelated->save();
+                }
+            }
+
+            return true;
+        }
+
+        // Beyond this point, the relation is plural.
+
+        // Plural relations that detach the old (replace everything) need to be allowed
+        if ($detaching) {
+            $this->throwExceptionIfDisallowedReplaceMany($relation);
+        }
+
+        // todo
+        // Collect currently related class/key combinations if we need to delete them.
+        // For BelongsToMany relations, process pivot data separately from the 'pivot' key
+        // For HasMany & MorphMany detaching relations, nullify the foreign keys.
+
+
+
+        return true;
     }
 
     /**
-     * Detaches records as related to a given record.
+     * Detaches records for a relationship.
      *
-     * @param mixed  $id
-     * @param string $relation
-     * @param array  $ids
+     * @param mixed|Model        $parent
+     * @param string             $relation
+     * @param Collection|Model[] $records
      * @return bool
      */
-    public function detachAsRelated($id, $relation, array $ids)
+    public function detachRelatedRecords($parent, $relation, $records)
     {
-        // TODO: Implement detachAsRelated() method.
+        $this->verifyParentArgument($parent);
+        $this->verifyArrayableArgument($records);
+
+        $relationInstance = $this->getRelationForMethodName($relation);
+
+        // todo
+
+        return true;
+    }
+
+    /**
+     * Detaches records by ID for a relationship.
+     *
+     * @param mixed|Model        $parent
+     * @param string             $relation
+     * @param Collection|mixed[] $ids
+     * @return bool
+     */
+    public function detachRelatedRecordsById($parent, $relation, $ids)
+    {
+        $this->verifyParentArgument($parent);
+        $this->verifyArrayableArgument($ids);
+
+        $relationInstance = $this->getRelationForMethodName($relation);
+
+        // todo
+
+        return true;
+    }
+
+    /**
+     * Verifies that parent argument is valid.
+     *
+     * @param mixed $parent
+     */
+    protected function verifyParentArgument($parent)
+    {
+        if ( ! is_a($parent, get_class($this->getModel()))) {
+            throw new InvalidArgumentException('Parent object is of unexpected model');
+        }
+    }
+
+    /**
+     * Verifies that an argument is an array or arrayable.
+     *
+     * @param mixed  $parameter
+     * @param string $argumentName
+     */
+    protected function verifyArrayableArgument($parameter, $argumentName = 'records')
+    {
+        if ( ! is_array($parameter) && ! ($parameter instanceof Collection)) {
+            throw new InvalidArgumentException("{$argumentName} must be given as array or collection instance");
+        }
+    }
+
+    /**
+     * Returns the relation instance for a method name.
+     *
+     * @param string     $relationMethod
+     * @param Model|null $parent
+     * @return Relation
+     */
+    protected function getRelationForMethodName($relationMethod, Model $parent = null)
+    {
+        $parent = $parent ?: $this->getModel();
+
+        $relationInstance = $parent->{$relationMethod}();
+
+        if ( ! $relationInstance || ! ($relationInstance instanceof Relation)) {
+            throw new InvalidArgumentException(
+                "'{$relationMethod}' is not a usable relation method of " . get_class($this->getModel())
+            );
+        }
+
+        return $relationInstance;
+    }
+
+    /**
+     * Returns whether a given relation instance is singular.
+     *
+     * @param Relation $relation
+     * @return bool
+     */
+    protected function isRelationSingular($relation)
+    {
+        return  $relation instanceof BelongsTo
+            ||  $relation instanceof HasOne
+            ||  $relation instanceof MorphOne
+            ||  $relation instanceof MorphTo;
+    }
+
+    /**
+     * Throws an exception if it is disallowed to replace many for a relation update.
+     *
+     * @param string $relation
+     * @throws RelationReplaceDisallowedException
+     */
+    protected function throwExceptionIfDisallowedReplaceMany($relation)
+    {
+        if ( ! $this->isAllowedToReplaceManyForRelation($relation)) {
+            throw new RelationReplaceDisallowedException;
+        }
+    }
+
+    /**
+     * Returns whether it is allowed to replace many for a relation update.
+     *
+     * @param string $relation
+     * @return bool
+     */
+    protected function isAllowedToReplaceManyForRelation($relation)
+    {
+        return false !== config('datastore.manipulation.allow-relationship-replace')
+            && false !== array_get($this->config, "allow-relationship-replace.{$relation}");
+    }
+
+    /**
+     * Returns whether models detached for a given relation should be deleted.
+     *
+     * @param string $relation
+     * @return bool
+     */
+    protected function shouldDeleteOnDetach($relation)
+    {
+        return (bool) array_get($this->config, "delete-detached.{$relation}");
     }
 
 }

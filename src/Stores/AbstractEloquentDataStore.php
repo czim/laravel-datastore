@@ -15,8 +15,11 @@ use Czim\DataStore\Enums\SortStrategyEnum;
 use Czim\DataStore\Exceptions\FeatureNotSupportedException;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
+use InvalidArgumentException;
 
 abstract class AbstractEloquentDataStore implements DataStoreInterface
 {
@@ -426,9 +429,7 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
      */
     public function create(DataObjectInterface $data)
     {
-        if (null === $this->manipulator) {
-            throw new FeatureNotSupportedException('No manipulator set');
-        }
+        $this->verifyManipulatorIsSet();
 
         $data = $this->convertResourceAttributesToDataKeys($data);
 
@@ -444,9 +445,7 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
      */
     public function make(DataObjectInterface $data)
     {
-        if (null === $this->manipulator) {
-            throw new FeatureNotSupportedException('No manipulator set');
-        }
+        $this->verifyManipulatorIsSet();
 
         $data = $this->convertResourceAttributesToDataKeys($data);
 
@@ -463,9 +462,7 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
      */
     public function updateById($id, DataObjectInterface $data)
     {
-        if (null === $this->manipulator) {
-            throw new FeatureNotSupportedException('No manipulator set');
-        }
+        $this->verifyManipulatorIsSet();
 
         $data = $this->convertResourceAttributesToDataKeys($data);
 
@@ -481,54 +478,87 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
      */
     public function deleteById($id)
     {
-        if (null === $this->manipulator) {
-            throw new FeatureNotSupportedException('No manipulator set');
-        }
+        $this->verifyManipulatorIsSet();
 
         return $this->manipulator->deleteById($id);
     }
 
     /**
-     * Attaches records as related to a given record.
+     * Attaches or replaces records for a relationship.
      *
-     * @param mixed  $id
-     * @param string $include
-     * @param array  $ids
-     * @param bool   $detaching
+     * @param mixed|Model              $parent
+     * @param string                   $include
+     * @param mixed|Collection|Model[] $records
+     * @param bool                     $detaching   if true, everything but the given records are detached
      * @return bool
-     * @throws FeatureNotSupportedException
      */
-    public function attachAsRelated($id, $include, array $ids, $detaching = false)
+    public function attachRelatedRecords($parent, $include, $records, $detaching = false)
     {
-        // todo
-        if (null === $this->manipulator) {
-            throw new FeatureNotSupportedException('No manipulator set');
+        $this->verifyManipulatorIsSet();
+
+        $relationMethod = $this->resourceAdapter->dataKeyForInclude($include);
+
+        if ( ! $relationMethod) {
+            throw new InvalidArgumentException("Relation method could not be resolved for include '{$include}'");
         }
 
-        $relation = $this->resourceAdapter->dataKeyForInclude($include);
-
-        return $this->manipulator->attachAsRelated($id, $relation, $ids, $detaching);
+        return $this->manipulator->attachRelatedRecords($parent, $relationMethod, $records, $detaching);
     }
 
     /**
-     * Detaches records as related to a given record.
+     * Detaches records for a relationship.
      *
-     * @param mixed  $id
-     * @param string $include
-     * @param array  $ids
+     * @param mixed|Model        $parent
+     * @param string             $include
+     * @param Collection|Model[] $records
      * @return bool
      * @throws FeatureNotSupportedException
      */
-    public function detachAsRelated($id, $include, array $ids)
+    public function detachRelatedRecords($parent, $include, $records)
     {
-        // todo
+        $this->verifyManipulatorIsSet();
+
+        $relationMethod = $this->resourceAdapter->dataKeyForInclude($include);
+
+        if ( ! $relationMethod) {
+            throw new InvalidArgumentException("Relation method could not be resolved for include '{$include}'");
+        }
+
+        return $this->manipulator->detachRelatedRecords($parent, $relationMethod, $records);
+    }
+
+    /**
+     * Detaches records by ID for a relationship.
+     *
+     * @param mixed|Model        $parent
+     * @param string             $include
+     * @param Collection|mixed[] $ids
+     * @return bool
+     * @throws FeatureNotSupportedException
+     */
+    public function detachRelatedRecordsById($parent, $include, $ids)
+    {
+        $this->verifyManipulatorIsSet();
+
+        $relationMethod = $this->resourceAdapter->dataKeyForInclude($include);
+
+        if ( ! $relationMethod) {
+            throw new InvalidArgumentException("Relation method could not be resolved for include '{$include}'");
+        }
+
+        return $this->manipulator->detachRelatedRecordsById($parent, $relationMethod, $ids);
+    }
+
+    /**
+     * Verifies that a manipulator instance if set, throws an exception otherwise.
+     *
+     * @throws FeatureNotSupportedException
+     */
+    protected function verifyManipulatorIsSet()
+    {
         if (null === $this->manipulator) {
             throw new FeatureNotSupportedException('No manipulator set');
         }
-
-        $relation = $this->resourceAdapter->dataKeyForInclude($include);
-
-        return $this->manipulator->detachAsRelated($id, $relation, $ids);
     }
 
     /**

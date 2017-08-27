@@ -89,31 +89,4 @@ class EloquentRepositoryManipulator extends EloquentModelManipulator
         return $this->repository->delete($id);
     }
 
-    /**
-     * Attaches records as related to a given record.
-     *
-     * @param mixed  $id
-     * @param string $relation
-     * @param array  $ids
-     * @param bool   $detaching
-     * @return bool
-     */
-    public function attachAsRelated($id, $relation, array $ids, $detaching = false)
-    {
-        // TODO: Implement attachAsRelated() method.
-    }
-
-    /**
-     * Detaches records as related to a given record.
-     *
-     * @param mixed  $id
-     * @param string $relation
-     * @param array  $ids
-     * @return bool
-     */
-    public function detachAsRelated($id, $relation, array $ids)
-    {
-        // TODO: Implement detachAsRelated() method.
-    }
-
 }

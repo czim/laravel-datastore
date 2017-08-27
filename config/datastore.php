@@ -252,6 +252,9 @@ return [
                 //],
             ],
         ],
+
+        // Whether to-many relationship replaces are allowed
+        'allow-relationship-replace' => true,
     ],
 
     /*
