@@ -292,6 +292,10 @@ class EloquentModelManipulator implements DataManipulatorInterface
      */
     protected function verifyParentArgument($parent)
     {
+        if (null === $this->getModel()) {
+            throw new InvalidArgumentException('No model set');
+        }
+
         if ( ! is_a($parent, get_class($this->getModel()))) {
             throw new InvalidArgumentException('Parent object is of unexpected model');
         }
