@@ -3,6 +3,14 @@ namespace Czim\DataStore\Test\Helpers\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * Class TestPost
+ *
+ * @property integer $id
+ * @property integer $genre_id
+ * @property string $title
+ * @property string $body
+ */
 class TestPost extends Model
 {
     protected $fillable = ['title', 'body'];

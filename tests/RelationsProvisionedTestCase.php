@@ -38,7 +38,7 @@ abstract class RelationsProvisionedTestCase extends ProvisionedTestCase
 
         Schema::create('test_comments', function($table) {
             $table->increments('id');
-            $table->integer('test_post_id')->unsigned();
+            $table->integer('test_post_id')->nullable()->unsigned();
             $table->integer('test_author_id')->nullable()->unsigned();
             $table->string('title', 50);
             $table->timestamps();

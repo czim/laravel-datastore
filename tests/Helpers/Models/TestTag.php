@@ -3,18 +3,21 @@ namespace Czim\DataStore\Test\Helpers\Models;
 
 use Illuminate\Database\Eloquent\Model;
 
+/**
+ * Class TestTag
+ *
+ * @property integer $id
+ * @property string  $name
+ * @property string  $taggable_type
+ * @property integer $taggable_id
+ */
 class TestTag extends Model
 {
     protected $fillable = [ 'name' ];
 
-    public function posts()
+    public function taggable()
     {
-        return $this->morphTo(TestPost::class, 'taggable');
-    }
-
-    public function comments()
-    {
-        return $this->morphTo(TestComment::class, 'taggable');
+        return $this->morphTo('taggable');
     }
 
 }
