@@ -161,7 +161,9 @@ class EloquentModelManipulator implements DataManipulatorInterface
             } elseif ($records instanceof Collection) {
                 $related = $records->first();
             } else {
+                // @codeCoverageIgnoreStart
                 $related = $records;
+                // @codeCoverageIgnoreEnd
             }
 
             if ( ! ($related instanceof Model) && null !== $related) {
@@ -188,7 +190,9 @@ class EloquentModelManipulator implements DataManipulatorInterface
             if ($relationInstance instanceof BelongsTo || $relationInstance instanceof MorphTo) {
 
                 if ($related && ! $related->exists && ! $related->save()) {
+                    // @codeCoverageIgnoreStart
                     return false;
+                    // @codeCoverageIgnoreEnd
                 }
 
                 if (null === $related) {
@@ -198,13 +202,17 @@ class EloquentModelManipulator implements DataManipulatorInterface
                 }
 
                 if ( ! $parent->save()) {
+                    // @codeCoverageIgnoreStart
                     return false;
+                    // @codeCoverageIgnoreEnd
                 }
 
             } else {
 
                 if (null !== $related && ! $parent->{$relation}()->save($related)) {
+                    // @codeCoverageIgnoreStart
                     return false;
+                    // @codeCoverageIgnoreEnd
                 }
             }
 
@@ -214,7 +222,9 @@ class EloquentModelManipulator implements DataManipulatorInterface
 
                 if ($deleting) {
                     if ( ! $previousRelated->delete()) {
+                        // @codeCoverageIgnoreStart
                         return false;
+                        // @codeCoverageIgnoreEnd
                     }
 
                 } else {
@@ -222,7 +232,9 @@ class EloquentModelManipulator implements DataManipulatorInterface
                     if ($relationInstance instanceof HasOne) {
                         $previousRelated->{$relationInstance->getForeignKeyName()} = null;
                         if ( ! $previousRelated->save()) {
+                            // @codeCoverageIgnoreStart
                             return false;
+                            // @codeCoverageIgnoreEnd
                         };
                     }
 
@@ -230,7 +242,9 @@ class EloquentModelManipulator implements DataManipulatorInterface
                         $previousRelated->{$relationInstance->getMorphType()} = null;
                         $previousRelated->{$relationInstance->getForeignKeyName()} = null;
                         if ( ! $previousRelated->save()) {
+                            // @codeCoverageIgnoreStart
                             return false;
+                            // @codeCoverageIgnoreEnd
                         }
                     }
                 }
