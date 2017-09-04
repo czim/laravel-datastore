@@ -168,12 +168,27 @@ class EloquentModelManipulator implements DataManipulatorInterface
                 throw new InvalidArgumentException("Singular relation record cannot be resolved to single model.");
             }
 
+            // If the relationship is a has-one, any previously attached model
+            // will be replaced by a new one, or disconnected if nullified.
+            /** @var Model|null $previousRelated */
+            $previousRelated = $parent->exists ? $parent->{$relation}()->first() : null;
+
+            $different = (  $previousRelated && null === $related
+                        ||  $related && null === $previousRelated
+                        ||  get_class($previousRelated) !== get_class($related)
+                        ||  $previousRelated->getKey() !== $related->getKey()
+            );
+
+            if ( ! $different) {
+                return true;
+            }
+
             // If the relationship is a belongs-to, the related model must be persisted
             // and the parent model must be updated aswell.
             if ($relationInstance instanceof BelongsTo || $relationInstance instanceof MorphTo) {
 
-                if ($related && ! $related->exists) {
-                    $related->save();
+                if ($related && ! $related->exists && ! $related->save()) {
+                    return false;
                 }
 
                 if (null === $related) {
@@ -182,46 +197,42 @@ class EloquentModelManipulator implements DataManipulatorInterface
                     $parent->{$relation}()->associate($related);
                 }
 
-                return $parent->save();
-            }
+                if ( ! $parent->save()) {
+                    return false;
+                }
 
+            } else {
 
-            // If the relationship is a has-one, any previously attached model
-            // will be replaced by a new one, or disconnected if nullified.
-            /** @var Model|null $previousRelated */
-            $previousRelated = $parent->exists ? $parent->{$relation}()->first() : null;
-
-            $different = (  ! (null === $previousRelated && null === $related)
-                        ||  $previousRelated && null === $related
-                        ||  $related && null === $previousRelated
-                        ||  get_class($previousRelated) !== get_class($related)
-                        ||  $previousRelated->getKey() !== $related->getKey()
-                        );
-
-            if ( ! $different) {
-                return true;
-            }
-
-            if (null !== $related) {
-                $parent->{$relation}()->save($related);
+                if (null !== $related && ! $parent->{$relation}()->save($related)) {
+                    return false;
+                }
             }
 
             // Handle the detached record, which may either be deleted,
             // or have its foreign keys nullified.
             if (null !== $previousRelated) {
-                if ($deleting && ! $previousRelated->delete()) {
-                    return false;
-                }
 
-                if ($relationInstance instanceof HasOne) {
-                    $previousRelated->{$relationInstance->getForeignKeyName()} = null;
-                    return $previousRelated->save();
-                }
+                if ($deleting) {
+                    if ( ! $previousRelated->delete()) {
+                        return false;
+                    }
 
-                if ($relationInstance instanceof MorphOne) {
-                    $previousRelated->{$relationInstance->getMorphType()} = null;
-                    $previousRelated->{$relationInstance->getForeignKeyName()} = null;
-                    return $previousRelated->save();
+                } else {
+
+                    if ($relationInstance instanceof HasOne) {
+                        $previousRelated->{$relationInstance->getForeignKeyName()} = null;
+                        if ( ! $previousRelated->save()) {
+                            return false;
+                        };
+                    }
+
+                    if ($relationInstance instanceof MorphOne) {
+                        $previousRelated->{$relationInstance->getMorphType()} = null;
+                        $previousRelated->{$relationInstance->getForeignKeyName()} = null;
+                        if ( ! $previousRelated->save()) {
+                            return false;
+                        }
+                    }
                 }
             }
 
