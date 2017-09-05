@@ -5,7 +5,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class TestComment extends Model
 {
-    protected $fillable = [ 'title', 'body' ];
+    protected $fillable = [ 'title' ];
 
     public function post()
     {

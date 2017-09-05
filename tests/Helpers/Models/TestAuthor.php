@@ -5,7 +5,7 @@ use Illuminate\Database\Eloquent\Model;
 
 class TestAuthor extends Model
 {
-    protected $fillable = [ 'name', 'gender' ];
+    protected $fillable = [ 'name' ];
 
     public function posts()
     {

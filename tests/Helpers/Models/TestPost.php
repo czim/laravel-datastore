@@ -51,4 +51,9 @@ class TestPost extends Model
         return $this->hasMany(TestSpecial::class, 'test_post_id');
     }
 
+    public function tagMorphOne()
+    {
+        return $this->morphOne(TestTag::class, 'taggable');
+    }
+
 }
