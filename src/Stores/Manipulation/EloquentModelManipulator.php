@@ -7,9 +7,13 @@ use Czim\DataStore\Exceptions\RelationReplaceDisallowedException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\BelongsToMany;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
+use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
@@ -152,7 +156,6 @@ class EloquentModelManipulator implements DataManipulatorInterface
 
         $relationInstance = $this->getRelationForMethodName($relation, $parent);
         $singular         = $this->isRelationSingular($relationInstance);
-        $deleting         = $this->shouldDeleteOnDetach($relation);
 
         if ($singular) {
             // Normalized the single record to a single related record;
@@ -170,87 +173,7 @@ class EloquentModelManipulator implements DataManipulatorInterface
                 throw new InvalidArgumentException("Singular relation record cannot be resolved to single model.");
             }
 
-            // If the relationship is a has-one, any previously attached model
-            // will be replaced by a new one, or disconnected if nullified.
-            /** @var Model|null $previousRelated */
-            $previousRelated = $parent->exists ? $parent->{$relation}()->first() : null;
-
-            $different = (  $previousRelated && null === $related
-                        ||  $related && null === $previousRelated
-                        ||  get_class($previousRelated) !== get_class($related)
-                        ||  $previousRelated->getKey() !== $related->getKey()
-            );
-
-            if ( ! $different) {
-                return true;
-            }
-
-            // If the relationship is a belongs-to, the related model must be persisted
-            // and the parent model must be updated aswell.
-            if ($relationInstance instanceof BelongsTo || $relationInstance instanceof MorphTo) {
-
-                if ($related && ! $related->exists && ! $related->save()) {
-                    // @codeCoverageIgnoreStart
-                    return false;
-                    // @codeCoverageIgnoreEnd
-                }
-
-                if (null === $related) {
-                    $parent->{$relation}()->dissociate($related);
-                } else {
-                    $parent->{$relation}()->associate($related);
-                }
-
-                if ( ! $parent->save()) {
-                    // @codeCoverageIgnoreStart
-                    return false;
-                    // @codeCoverageIgnoreEnd
-                }
-
-            } else {
-
-                if (null !== $related && ! $parent->{$relation}()->save($related)) {
-                    // @codeCoverageIgnoreStart
-                    return false;
-                    // @codeCoverageIgnoreEnd
-                }
-            }
-
-            // Handle the detached record, which may either be deleted,
-            // or have its foreign keys nullified.
-            if (null !== $previousRelated) {
-
-                if ($deleting) {
-                    if ( ! $previousRelated->delete()) {
-                        // @codeCoverageIgnoreStart
-                        return false;
-                        // @codeCoverageIgnoreEnd
-                    }
-
-                } else {
-
-                    if ($relationInstance instanceof HasOne) {
-                        $previousRelated->{$relationInstance->getForeignKeyName()} = null;
-                        if ( ! $previousRelated->save()) {
-                            // @codeCoverageIgnoreStart
-                            return false;
-                            // @codeCoverageIgnoreEnd
-                        };
-                    }
-
-                    if ($relationInstance instanceof MorphOne) {
-                        $previousRelated->{$relationInstance->getMorphType()} = null;
-                        $previousRelated->{$relationInstance->getForeignKeyName()} = null;
-                        if ( ! $previousRelated->save()) {
-                            // @codeCoverageIgnoreStart
-                            return false;
-                            // @codeCoverageIgnoreEnd
-                        }
-                    }
-                }
-            }
-
-            return true;
+            return $this->performAttachRelatedForSingular($parent, $relation, $relationInstance, $related);
         }
 
         // Beyond this point, the relation is plural.
@@ -260,12 +183,223 @@ class EloquentModelManipulator implements DataManipulatorInterface
             $this->throwExceptionIfDisallowedReplaceMany($relation);
         }
 
-        // todo
+        if ( ! ($records instanceof Collection)) {
+            $records = new Collection($records);
+        }
+
         // Collect currently related class/key combinations if we need to delete them.
         // For BelongsToMany relations, process pivot data separately from the 'pivot' key
         // For HasMany & MorphMany detaching relations, nullify the foreign keys.
+        return $this->performAttachRelatedForPlural($parent, $relation, $relationInstance, $records, $detaching);
+    }
+
+    /**
+     * Performs the attaching of new related record for a singular relation.
+     *
+     * @param Model      $parent
+     * @param string     $relation
+     * @param Relation   $relationInstance
+     * @param Model|null $related
+     * @return bool
+     */
+    protected function performAttachRelatedForSingular(
+        Model $parent,
+        $relation,
+        Relation $relationInstance,
+        Model $related = null
+    ) {
+        // If the relationship is a has-one, any previously attached model
+        // will be replaced by a new one, or disconnected if nullified.
+        /** @var Model|null $previousRelated */
+        $previousRelated = $parent->exists ? $parent->{$relation}()->first() : null;
+
+        $different = (  $previousRelated && null === $related
+            ||  $related && null === $previousRelated
+            ||  get_class($previousRelated) !== get_class($related)
+            ||  $previousRelated->getKey() !== $related->getKey()
+        );
+
+        if ( ! $different) {
+            return true;
+        }
+
+        $deleting = $this->shouldDeleteOnDetach($relation);
+
+        // If the relationship is a belongs-to, the related model must be persisted
+        // and the parent model must be updated aswell.
+        if ($relationInstance instanceof BelongsTo || $relationInstance instanceof MorphTo) {
+
+            if ($related && ! $related->exists && ! $related->save()) {
+                // @codeCoverageIgnoreStart
+                return false;
+                // @codeCoverageIgnoreEnd
+            }
+
+            if (null === $related) {
+                $parent->{$relation}()->dissociate($related);
+            } else {
+                $parent->{$relation}()->associate($related);
+            }
+
+            if ( ! $parent->save()) {
+                // @codeCoverageIgnoreStart
+                return false;
+                // @codeCoverageIgnoreEnd
+            }
+
+        } else {
+
+            if (null !== $related && ! $parent->{$relation}()->save($related)) {
+                // @codeCoverageIgnoreStart
+                return false;
+                // @codeCoverageIgnoreEnd
+            }
+        }
+
+        // Handle the detached record, which may either be deleted,
+        // or have its foreign keys nullified.
+        if (null !== $previousRelated) {
+
+            if ($deleting) {
+                if ( ! $previousRelated->delete()) {
+                    // @codeCoverageIgnoreStart
+                    return false;
+                    // @codeCoverageIgnoreEnd
+                }
+
+            } else {
+
+                if ($relationInstance instanceof HasOne) {
+                    $previousRelated->{$relationInstance->getForeignKeyName()} = null;
+                    if ( ! $previousRelated->save()) {
+                        // @codeCoverageIgnoreStart
+                        return false;
+                        // @codeCoverageIgnoreEnd
+                    };
+                }
+
+                if ($relationInstance instanceof MorphOne) {
+                    $previousRelated->{$relationInstance->getMorphType()} = null;
+                    $previousRelated->{$relationInstance->getForeignKeyName()} = null;
+                    if ( ! $previousRelated->save()) {
+                        // @codeCoverageIgnoreStart
+                        return false;
+                        // @codeCoverageIgnoreEnd
+                    }
+                }
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Performs the attaching of new related record for a plural relation.
+     *
+     * @param Model              $parent
+     * @param string             $relation
+     * @param Relation           $relationInstance
+     * @param Collection|Model[] $records
+     * @param bool               $detaching
+     * @return bool
+     */
+    protected function performAttachRelatedForPlural(
+        Model $parent,
+        $relation,
+        Relation $relationInstance,
+        Collection $records,
+        $detaching = false
+    ) {
+        $deleting = $this->shouldDeleteOnDetach($relation);
+
+        // Any records not yet persisted, should be persisted before they
+        // are saved for relations that depend on foreign keys.
+        if ($relationInstance instanceof BelongsToMany || $relationInstance instanceof MorphToMany) {
+
+            foreach ($records as $record) {
+                if ( ! $record->exists && ! $record->save()) {
+                    // @codeCoverageIgnoreStart
+                    return false;
+                    // @codeCoverageIgnoreEnd
+                }
+            }
+        }
 
 
+        if ($relationInstance instanceof BelongsToMany) {
+
+            $relatedModel = $relationInstance->getRelated();
+
+            // todo take pivot data into consideration
+            // also for comparing previous/current state
+
+            $newIds = $records->pluck($relatedModel->getKeyName());
+
+            // Only when deleting detached, the difference must be analyzed
+            // to find records that must be deleted.
+            $detachIds = [];
+
+            if ($deleting) {
+                $previousIds = $relationInstance->pluck($relatedModel->getQualifiedKeyName());
+                $detachIds   = $previousIds->diff($newIds)->toArray();
+            }
+
+            $relationInstance->sync($newIds, $detaching);
+
+            if ($deleting) {
+                foreach ($detachIds as $deleteId) {
+                    if ( ! $this->deletePreviouslyRelatedRecord($relation, $relatedModel->find($deleteId))) {
+                        // @codeCoverageIgnoreStart
+                        return false;
+                        // @codeCoverageIgnoreEnd
+                    }
+                }
+            }
+
+        } elseif ($relationInstance instanceof HasMany) {
+
+            $relatedModel = $relationInstance->getRelated();
+
+            $newIds      = $records->pluck($relatedModel->getKeyName());
+            $previousIds = $relationInstance->pluck($relatedModel->getKeyName());
+            $detachIds   = $previousIds->diff($newIds)->toArray();
+
+            $relationInstance->saveMany($records);
+
+            if ($deleting) {
+                foreach ($detachIds as $deleteId) {
+                    if ( ! $this->deletePreviouslyRelatedRecord($relation, $relatedModel->find($deleteId))) {
+                        // @codeCoverageIgnoreStart
+                        return false;
+                        // @codeCoverageIgnoreEnd
+                    }
+                }
+            } else {
+                // Nullify the foreign key on the detached models
+                foreach ($detachIds as $detachId) {
+
+                    $detachRecord = $relatedModel->find($detachId);
+
+                    if ( ! $detachRecord) {
+                        continue;
+                    }
+
+                    if ( ! $detachRecord->update([ $relationInstance->getForeignKeyName() => null ])) {
+                        return false;
+                    }
+                }
+            }
+
+        } elseif ($relationInstance instanceof MorphToMany) {
+
+            // Handle morphToMany sync update
+
+            // todo
+
+        } elseif ($relationInstance instanceof MorphMany) {
+
+            // todo
+        }
 
         return true;
     }
@@ -308,6 +442,21 @@ class EloquentModelManipulator implements DataManipulatorInterface
         // todo
 
         return true;
+    }
+
+    /**
+     * Deletes a previously related record.
+     *
+     * This should only be called if the relation is configured to
+     * delete on detaching.
+     *
+     * @param string $relation
+     * @param Model  $record
+     * @return bool|null
+     */
+    protected function deletePreviouslyRelatedRecord($relation, Model $record)
+    {
+        return $record->delete();
     }
 
     /**
@@ -396,8 +545,11 @@ class EloquentModelManipulator implements DataManipulatorInterface
      */
     protected function isAllowedToReplaceManyForRelation($relation)
     {
-        return false !== config('datastore.manipulation.allow-relationship-replace')
-            && false !== array_get($this->config, "allow-relationship-replace.{$relation}");
+        if (null !== ($allowed = array_get($this->config, "allow-relationship-replace.{$relation}"))) {
+            return (bool) $allowed;
+        }
+
+        return (bool) config('datastore.manipulation.allow-relationship-replace');
     }
 
     /**
