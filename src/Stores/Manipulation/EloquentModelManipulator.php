@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasOneOrMany;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
@@ -17,6 +18,7 @@ use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
+use RuntimeException;
 
 class EloquentModelManipulator implements DataManipulatorInterface
 {
@@ -89,7 +91,7 @@ class EloquentModelManipulator implements DataManipulatorInterface
     {
         $model = $this->model;
 
-        return $model::create($data->toArray());
+        return $model->create($data->toArray());
     }
 
     /**
@@ -117,7 +119,7 @@ class EloquentModelManipulator implements DataManipulatorInterface
         $model = $this->model;
 
         /** @var Model $record */
-        $record = $model::find($id);
+        $record = $model->find($id);
 
         if ( ! $record) {
             throw new ModelNotFoundException();
@@ -310,8 +312,6 @@ class EloquentModelManipulator implements DataManipulatorInterface
         Collection $records,
         $detaching = false
     ) {
-        $deleting = $this->shouldDeleteOnDetach($relation);
-
         // Any records not yet persisted, should be persisted before they
         // are saved for relations that depend on foreign keys.
         if ($relationInstance instanceof BelongsToMany || $relationInstance instanceof MorphToMany) {
@@ -325,47 +325,99 @@ class EloquentModelManipulator implements DataManipulatorInterface
             }
         }
 
+        if ($relationInstance instanceof BelongsToMany || $relationInstance instanceof MorphToMany) {
+            return $this->performAttachRelatedForBelongsToMany(
+                $parent, $relation, $relationInstance, $records, $detaching
+            );
+        }
 
-        if ($relationInstance instanceof BelongsToMany) {
+        if ($relationInstance instanceof HasMany || $relationInstance instanceof MorphMany) {
+            return $this->performAttachRelatedForHasMany(
+                $parent, $relation, $relationInstance, $records, $detaching
+            );
+        }
 
-            $relatedModel = $relationInstance->getRelated();
+        throw new RuntimeException("Unsupported relation instance type '" . get_class($relationInstance) . "'");
+    }
 
-            // todo take pivot data into consideration
-            // also for comparing previous/current state
+    /**
+     * @param Model              $parent
+     * @param string             $relation
+     * @param BelongsToMany      $relationInstance
+     * @param Collection|Model[] $records
+     * @param bool               $detaching
+     * @return bool
+     */
+    protected function performAttachRelatedForBelongsToMany(
+        Model $parent,
+        $relation,
+        BelongsToMany $relationInstance,
+        Collection $records,
+        $detaching = false
+    ) {
+        $deleting = $this->shouldDeleteOnDetach($relation);
 
-            $newIds = $records->pluck($relatedModel->getKeyName());
+        $relatedModel = $relationInstance->getRelated();
 
-            // Only when deleting detached, the difference must be analyzed
-            // to find records that must be deleted.
-            $detachIds = [];
+        // todo take pivot data into consideration
+        // also for comparing previous/current state
 
-            if ($deleting) {
-                $previousIds = $relationInstance->pluck($relatedModel->getQualifiedKeyName());
-                $detachIds   = $previousIds->diff($newIds)->toArray();
-            }
+        $newIds = $records->pluck($relatedModel->getKeyName());
 
-            $relationInstance->sync($newIds, $detaching);
+        // Only when deleting detached, the difference must be analyzed
+        // to find records that must be deleted.
+        $detachIds = [];
 
-            if ($deleting) {
-                foreach ($detachIds as $deleteId) {
-                    if ( ! $this->deletePreviouslyRelatedRecord($relation, $relatedModel->find($deleteId))) {
-                        // @codeCoverageIgnoreStart
-                        return false;
-                        // @codeCoverageIgnoreEnd
-                    }
+        if ($deleting) {
+            $previousIds = $relationInstance->pluck($relatedModel->getQualifiedKeyName());
+            $detachIds   = $previousIds->diff($newIds)->toArray();
+        }
+
+        $relationInstance->sync($newIds, $detaching);
+
+        if ($deleting) {
+            foreach ($detachIds as $deleteId) {
+                if ( ! $this->deletePreviouslyRelatedRecord($relation, $relatedModel->find($deleteId))) {
+                    // @codeCoverageIgnoreStart
+                    return false;
+                    // @codeCoverageIgnoreEnd
                 }
             }
+        }
 
-        } elseif ($relationInstance instanceof HasMany) {
+        return true;
+    }
 
-            $relatedModel = $relationInstance->getRelated();
+    /**
+     * @param Model              $parent
+     * @param string             $relation
+     * @param HasOneOrMany       $relationInstance
+     * @param Collection|Model[] $records
+     * @param bool               $detaching
+     * @return bool
+     */
+    protected function performAttachRelatedForHasMany(
+        Model $parent,
+        $relation,
+        HasOneOrMany $relationInstance,
+        Collection $records,
+        $detaching = false
+    ) {
+        $deleting = $this->shouldDeleteOnDetach($relation);
 
+        $relatedModel = $relationInstance->getRelated();
+
+        $detachIds = [];
+
+        if ($detaching) {
             $newIds      = $records->pluck($relatedModel->getKeyName());
             $previousIds = $relationInstance->pluck($relatedModel->getKeyName());
             $detachIds   = $previousIds->diff($newIds)->toArray();
+        }
 
-            $relationInstance->saveMany($records);
+        $relationInstance->saveMany($records);
 
+        if ($detaching) {
             if ($deleting) {
                 foreach ($detachIds as $deleteId) {
                     if ( ! $this->deletePreviouslyRelatedRecord($relation, $relatedModel->find($deleteId))) {
@@ -380,29 +432,26 @@ class EloquentModelManipulator implements DataManipulatorInterface
 
                     $detachRecord = $relatedModel->find($detachId);
 
+                    // @codeCoverageIgnoreStart
                     if ( ! $detachRecord) {
                         continue;
                     }
+                    // @codeCoverageIgnoreEnd
 
-                    if ( ! $detachRecord->update([ $relationInstance->getForeignKeyName() => null ])) {
+                    $detachRecord->forceFill([$relationInstance->getForeignKeyName() => null]);
+
+                    if ( ! $detachRecord->save()) {
+                        // @codeCoverageIgnoreStart
                         return false;
+                        // @codeCoverageIgnoreEnd
                     }
                 }
             }
-
-        } elseif ($relationInstance instanceof MorphToMany) {
-
-            // Handle morphToMany sync update
-
-            // todo
-
-        } elseif ($relationInstance instanceof MorphMany) {
-
-            // todo
         }
 
         return true;
     }
+
 
     /**
      * Detaches records for a relationship.
