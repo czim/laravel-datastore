@@ -56,4 +56,18 @@ class TestPost extends Model
         return $this->morphOne(TestTag::class, 'taggable');
     }
 
+    public function morphTags()
+    {
+        return $this->morphToMany(TestTag::class, 'taggable', 'taggables');
+    }
+
+    public function unsupported()
+    {
+        return $this->hasManyThrough(TestTag::class, TestComment::class);
+    }
+
+    public function notARelation()
+    {
+        return $this;
+    }
 }

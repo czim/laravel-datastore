@@ -65,6 +65,12 @@ abstract class RelationsProvisionedTestCase extends ProvisionedTestCase
             $table->timestamps();
             $table->primary(['special']);
         });
+
+        Schema::create('taggables', function($table) {
+            $table->integer('test_tag_id')->unsigned()->nullable();
+            $table->integer('taggable_id')->unsigned()->nullable();
+            $table->string('taggable_type', 255)->nullable();
+        });
     }
 
     /**

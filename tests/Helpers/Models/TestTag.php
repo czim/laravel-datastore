@@ -20,4 +20,9 @@ class TestTag extends Model
         return $this->morphTo('taggable');
     }
 
+    public function posts()
+    {
+        return $this->morphedByMany(TestPost::class, 'taggable', 'taggables');
+    }
+
 }
