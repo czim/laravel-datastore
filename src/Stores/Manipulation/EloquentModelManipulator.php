@@ -161,15 +161,7 @@ class EloquentModelManipulator implements DataManipulatorInterface
 
         if ($singular) {
             // Normalized the single record to a single related record;
-            if (is_array($records)) {
-                $related = array_first($records);
-            } elseif ($records instanceof Collection) {
-                $related = $records->first();
-            } else {
-                // @codeCoverageIgnoreStart
-                $related = $records;
-                // @codeCoverageIgnoreEnd
-            }
+            $related = $this->getSingleRecordFromArrayableArgument($records);
 
             if ( ! ($related instanceof Model) && null !== $related) {
                 throw new InvalidArgumentException("Singular relation record cannot be resolved to single model.");
@@ -417,35 +409,39 @@ class EloquentModelManipulator implements DataManipulatorInterface
 
         $relationInstance->saveMany($records);
 
-        if ($detaching) {
-            if ($deleting) {
-                foreach ($detachIds as $deleteId) {
-                    if ( ! $this->deletePreviouslyRelatedRecord($relation, $relatedModel->find($deleteId))) {
-                        // @codeCoverageIgnoreStart
-                        return false;
-                        // @codeCoverageIgnoreEnd
-                    }
-                }
-            } else {
-                // Nullify the foreign key on the detached models
-                foreach ($detachIds as $detachId) {
+        if ( ! $detaching) {
+            return true;
+        }
 
-                    $detachRecord = $relatedModel->find($detachId);
-
+        if ($deleting) {
+            foreach ($detachIds as $deleteId) {
+                if ( ! $this->deletePreviouslyRelatedRecord($relation, $relatedModel->find($deleteId))) {
                     // @codeCoverageIgnoreStart
-                    if ( ! $detachRecord) {
-                        continue;
-                    }
+                    return false;
                     // @codeCoverageIgnoreEnd
-
-                    $detachRecord->forceFill([$relationInstance->getForeignKeyName() => null]);
-
-                    if ( ! $detachRecord->save()) {
-                        // @codeCoverageIgnoreStart
-                        return false;
-                        // @codeCoverageIgnoreEnd
-                    }
                 }
+            }
+
+            return true;
+        }
+
+        // Nullify the foreign key on the detached models
+        foreach ($detachIds as $detachId) {
+
+            $detachRecord = $relatedModel->find($detachId);
+
+            // @codeCoverageIgnoreStart
+            if ( ! $detachRecord) {
+                continue;
+            }
+            // @codeCoverageIgnoreEnd
+
+            $detachRecord->forceFill([$relationInstance->getForeignKeyName() => null]);
+
+            if ( ! $detachRecord->save()) {
+                // @codeCoverageIgnoreStart
+                return false;
+                // @codeCoverageIgnoreEnd
             }
         }
 
@@ -467,10 +463,38 @@ class EloquentModelManipulator implements DataManipulatorInterface
         $this->verifyArrayableArgument($records);
 
         $relationInstance = $this->getRelationForMethodName($relation);
+        $singular         = $this->isRelationSingular($relationInstance);
 
-        // todo
+        // Singular relationships are detachable by attaching null
+        if ($singular) {
 
-        return true;
+            // If the given record does not match for detachment
+            $related  = $this->getSingleRecordFromArrayableArgument($records);
+            $previous = $relationInstance->first();
+
+            if (    ! $related || ! $previous
+                ||  get_class($previous) !== get_class($related) ||  $previous->getKey() !== $related->getKey()
+            ) {
+                return false;
+            }
+
+            return $this->attachRelatedRecords($parent, $relation, [ null ], true);
+        }
+
+        // Plural relations
+        if ( ! ($records instanceof Collection)) {
+            $records = new Collection($records);
+        }
+
+        if ($relationInstance instanceof BelongsToMany || $relationInstance instanceof MorphToMany) {
+            return $this->performDetachRelatedForBelongsToMany($parent, $relation, $relationInstance, $records);
+        }
+
+        if ($relationInstance instanceof HasMany || $relationInstance instanceof MorphMany) {
+            return $this->performDetachRelatedForHasMany($parent, $relation, $relationInstance, $records);
+        }
+
+        throw new RuntimeException("Unsupported relation instance type '" . get_class($relationInstance) . "'");
     }
 
     /**
@@ -492,6 +516,106 @@ class EloquentModelManipulator implements DataManipulatorInterface
 
         return true;
     }
+
+    /**
+     * @param Model              $parent
+     * @param string             $relation
+     * @param BelongsToMany      $relationInstance
+     * @param Collection|Model[] $records
+     * @return bool
+     */
+    protected function performDetachRelatedForBelongsToMany(
+        Model $parent,
+        $relation,
+        BelongsToMany $relationInstance,
+        Collection $records
+    ) {
+        $deleting = $this->shouldDeleteOnDetach($relation);
+
+        $relatedModel = $relationInstance->getRelated();
+
+        $detachIds = $records->pluck($relatedModel->getKeyName());
+
+        $matchedIds = $relationInstance
+            ->whereIn($relatedModel->getQualifiedKeyName(), $detachIds->toArray())
+            ->pluck($relatedModel->getQualifiedKeyName());
+
+        if ( ! $matchedIds->count()) {
+            return true;
+        }
+
+        $relationInstance->detach($matchedIds->toArray());
+
+        if ($deleting) {
+            foreach ($matchedIds as $deleteId) {
+                if ( ! $this->deletePreviouslyRelatedRecord($relation, $relatedModel->find($deleteId))) {
+                    // @codeCoverageIgnoreStart
+                    return false;
+                    // @codeCoverageIgnoreEnd
+                }
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * @param Model              $parent
+     * @param string             $relation
+     * @param HasOneOrMany       $relationInstance
+     * @param Collection|Model[] $records
+     * @return bool
+     */
+    protected function performDetachRelatedForHasMany(
+        Model $parent,
+        $relation,
+        HasOneOrMany $relationInstance,
+        Collection $records
+    ) {
+        $deleting = $this->shouldDeleteOnDetach($relation);
+
+        $relatedModel = $relationInstance->getRelated();
+
+        $detachIds = $records->pluck($relatedModel->getKeyName());
+
+        $matchedIds = $relationInstance
+            ->whereIn($relatedModel->getQualifiedKeyName(), $detachIds->toArray())
+            ->pluck($relatedModel->getQualifiedKeyName());
+
+        if ( ! $matchedIds->count()) {
+            return true;
+        }
+
+        if ($deleting) {
+            foreach ($matchedIds as $deleteId) {
+                if ( ! $this->deletePreviouslyRelatedRecord($relation, $relatedModel->find($deleteId))) {
+                    // @codeCoverageIgnoreStart
+                    return false;
+                    // @codeCoverageIgnoreEnd
+                }
+            }
+
+            return true;
+        }
+
+        // Nullify the foreign key on the detached models
+        /** @var Collection|Model[] $matchedRecords */
+        $matchedRecords = $records->whereIn($relatedModel->getKeyName(), $matchedIds->toArray());
+
+        foreach ($matchedRecords as $detachRecord) {
+
+            $detachRecord->forceFill([$relationInstance->getForeignKeyName() => null]);
+
+            if ( ! $detachRecord->save()) {
+                // @codeCoverageIgnoreStart
+                return false;
+                // @codeCoverageIgnoreEnd
+            }
+        }
+
+        return true;
+    }
+
 
     /**
      * Deletes a previously related record.
@@ -535,6 +659,27 @@ class EloquentModelManipulator implements DataManipulatorInterface
         if ( ! is_array($parameter) && ! ($parameter instanceof Collection)) {
             throw new InvalidArgumentException("{$argumentName} must be given as array or collection instance");
         }
+    }
+
+    /**
+     * Normalizes a single record from a verified records list argument.
+     *
+     * @param array|Collection|mixed $records
+     * @return Model
+     */
+    protected function getSingleRecordFromArrayableArgument($records)
+    {
+        if (is_array($records)) {
+            return array_first($records);
+        }
+
+        if ($records instanceof Collection) {
+            return $records->first();
+        }
+
+        // @codeCoverageIgnoreStart
+        return $records;
+        // @codeCoverageIgnoreEnd
     }
 
     /**
