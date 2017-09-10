@@ -40,6 +40,7 @@ abstract class RelationsProvisionedTestCase extends ProvisionedTestCase
             $table->increments('id');
             $table->integer('test_post_id')->nullable()->unsigned();
             $table->integer('test_author_id')->nullable()->unsigned();
+            $table->integer('test_has_one_post_id')->nullable()->unsigned();
             $table->string('title', 50);
             $table->timestamps();
         });

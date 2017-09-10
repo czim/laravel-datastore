@@ -28,6 +28,8 @@ class EloquentModelManipulatorAttachTest extends RelationsProvisionedTestCase
     //      Singular Relationships
     // ------------------------------------------------------------------------------
 
+    // Belongs To
+
     /**
      * @test
      */
@@ -121,6 +123,8 @@ class EloquentModelManipulatorAttachTest extends RelationsProvisionedTestCase
         static::assertNull(TestGenre::find(1), "Previously related was not deleted");
     }
 
+    // Has One
+
     /**
      * @test
      */
@@ -174,6 +178,8 @@ class EloquentModelManipulatorAttachTest extends RelationsProvisionedTestCase
         static::assertEquals($comment->id, $post->commentHasOne->id);
         static::assertNull(TestComment::find(1), "Previously related was not deleted");
     }
+
+    // Morph To
 
     /**
      * @test
@@ -236,6 +242,8 @@ class EloquentModelManipulatorAttachTest extends RelationsProvisionedTestCase
 
         static::assertNull(TestPost::find(1), "Previously related was not deleted");
     }
+
+    // Morph One
 
     /**
      * @test

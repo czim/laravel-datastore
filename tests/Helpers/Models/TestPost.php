@@ -43,7 +43,7 @@ class TestPost extends Model
 
     public function commentHasOne()
     {
-        return $this->hasOne(TestComment::class, 'test_post_id');
+        return $this->hasOne(TestComment::class, 'test_has_one_post_id');
     }
 
     public function specials()
