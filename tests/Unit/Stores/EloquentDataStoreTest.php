@@ -14,6 +14,7 @@ use Czim\DataStore\Contracts\Stores\Sorting\SortStrategyInterface;
 use Czim\DataStore\Stores\EloquentDataStore;
 use Czim\DataStore\Test\Helpers\Data\TestData;
 use Czim\DataStore\Test\Helpers\Models\TestModel;
+use Czim\DataStore\Test\Helpers\Models\TestPost;
 use Czim\DataStore\Test\ProvisionedTestCase;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
@@ -443,6 +444,140 @@ class EloquentDataStoreTest extends ProvisionedTestCase
         $store->deleteById(1);
     }
 
+    /**
+     * @test
+     */
+    function it_passes_attach_related_records_through_to_manipulator()
+    {
+        $parent = new TestPost;
+
+        $store = new EloquentDataStore;
+
+        $manipulator = $this->getMockManipulator();
+        $manipulator->shouldReceive('attachRelatedRecords')->once()
+            ->with($parent, 'included', [ $parent ], true)
+            ->andReturn(true);
+
+        $adapter = $this->getMockAdapter();
+        $adapter->shouldReceive('dataKeyForInclude')->once()->with('include')->andReturn('included');
+
+        $store->setManipulator($manipulator);
+        $store->setResourceAdapter($adapter);
+
+        static::assertTrue($store->attachRelatedRecords($parent, 'include', [ $parent ], true));
+    }
+
+    /**
+     * @test
+     * @expectedException \InvalidArgumentException
+     */
+    function it_throws_an_exception_for_attach_if_include_could_not_be_resolved()
+    {
+        $parent = new TestPost;
+
+        $store = new EloquentDataStore;
+
+        $manipulator = $this->getMockManipulator();
+        $manipulator->shouldReceive('attachRelatedRecords')->never()->andReturn(true);
+
+        $adapter = $this->getMockAdapter();
+        $adapter->shouldReceive('dataKeyForInclude')->once()->with('include')->andReturn(false);
+
+        $store->setManipulator($manipulator);
+        $store->setResourceAdapter($adapter);
+
+        $store->attachRelatedRecords($parent, 'include', [ $parent ], true);
+    }
+
+    /**
+     * @test
+     */
+    function it_passes_detach_related_records_through_to_manipulator()
+    {
+        $parent = new TestPost;
+
+        $store = new EloquentDataStore;
+
+        $manipulator = $this->getMockManipulator();
+        $manipulator->shouldReceive('detachRelatedRecords')->once()
+            ->with($parent, 'included', [ $parent ])
+            ->andReturn(true);
+
+        $adapter = $this->getMockAdapter();
+        $adapter->shouldReceive('dataKeyForInclude')->once()->with('include')->andReturn('included');
+
+        $store->setManipulator($manipulator);
+        $store->setResourceAdapter($adapter);
+
+        static::assertTrue($store->detachRelatedRecords($parent, 'include', [ $parent ]));
+    }
+
+    /**
+     * @test
+     * @expectedException \InvalidArgumentException
+     */
+    function it_throws_an_exception_for_detach_if_include_could_not_be_resolved()
+    {
+        $parent = new TestPost;
+
+        $store = new EloquentDataStore;
+
+        $manipulator = $this->getMockManipulator();
+        $manipulator->shouldReceive('detachRelatedRecords')->never()->andReturn(true);
+
+        $adapter = $this->getMockAdapter();
+        $adapter->shouldReceive('dataKeyForInclude')->once()->with('include')->andReturn(false);
+
+        $store->setManipulator($manipulator);
+        $store->setResourceAdapter($adapter);
+
+        $store->detachRelatedRecords($parent, 'include', [ $parent ]);
+    }
+
+    /**
+     * @test
+     */
+    function it_passes_detach_related_records_by_id_through_to_manipulator()
+    {
+        $parent = new TestPost;
+
+        $store = new EloquentDataStore;
+
+        $manipulator = $this->getMockManipulator();
+        $manipulator->shouldReceive('detachRelatedRecordsById')->once()
+            ->with($parent, 'included', [ 1 ])
+            ->andReturn(true);
+
+        $adapter = $this->getMockAdapter();
+        $adapter->shouldReceive('dataKeyForInclude')->once()->with('include')->andReturn('included');
+
+        $store->setManipulator($manipulator);
+        $store->setResourceAdapter($adapter);
+
+        static::assertTrue($store->detachRelatedRecordsById($parent, 'include', [ 1 ]));
+    }
+
+    /**
+     * @test
+     * @expectedException \InvalidArgumentException
+     */
+    function it_throws_an_exception_for_detach_by_id_if_include_could_not_be_resolved()
+    {
+        $parent = new TestPost;
+
+        $store = new EloquentDataStore;
+
+        $manipulator = $this->getMockManipulator();
+        $manipulator->shouldReceive('detachRelatedRecordsById')->never()->andReturn(true);
+
+        $adapter = $this->getMockAdapter();
+        $adapter->shouldReceive('dataKeyForInclude')->once()->with('include')->andReturn(false);
+
+        $store->setManipulator($manipulator);
+        $store->setResourceAdapter($adapter);
+
+        $store->detachRelatedRecordsById($parent, 'include', [ 1 ]);
+    }
 
     /**
      * @return Mockery\MockInterface|Mockery\Mock|DataManipulatorInterface
