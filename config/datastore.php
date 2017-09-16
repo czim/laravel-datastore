@@ -101,6 +101,31 @@ return [
 
     /*
     |--------------------------------------------------------------------------
+    | Includes
+    |--------------------------------------------------------------------------
+    |
+    | Special include logic may be made configurable per model.
+    |
+    */
+
+    'include' => [
+
+        // Map instances of the IncludeDecoratorInterface
+        'decorator' => [
+
+            // The default decorator class to use
+            'default' => null,
+
+            // Per-model mapped decorators
+            'model-map' => [
+                // \YourModel\ClassName::class => \YourInclude\DecoratorClassName::class
+            ],
+        ]
+
+    ],
+
+    /*
+    |--------------------------------------------------------------------------
     | Filtering
     |--------------------------------------------------------------------------
     |

@@ -6,6 +6,7 @@ use Czim\DataStore\Contracts\Stores\DataStoreFactoryInterface;
 use Czim\DataStore\Contracts\Stores\DataStoreInterface;
 use Czim\DataStore\Contracts\Stores\EloquentModelDataStoreInterface;
 use Czim\DataStore\Contracts\Stores\EloquentRepositoryDataStoreInterface;
+use Czim\DataStore\Contracts\Stores\Includes\IncludeDecoratorInterface;
 use Czim\DataStore\Contracts\Stores\Includes\IncludeResolverInterface;
 use Czim\DataStore\Contracts\Stores\Manipulation\DataManipulatorFactoryInterface;
 use Czim\DataStore\Contracts\Stores\Manipulation\DataManipulatorInterface;
@@ -107,11 +108,12 @@ class DataStoreFactory implements DataStoreFactoryInterface
             ->setStrategyDriver($this->getDatabaseDriverString());
 
         if ($resolver = $this->getIncludeResolverForObject($model)) {
-
             $resolver->setResourceAdapterFactory($adapterFactory);
-
-
             $store->setIncludeResolver($resolver);
+        }
+
+        if ($decorator = $this->getIncludeDecoratorForObject($model)) {
+            $store->setIncludeDecorator($decorator);
         }
 
         $store->setModel($model);
@@ -153,10 +155,12 @@ class DataStoreFactory implements DataStoreFactoryInterface
             ->setStrategyDriver($this->getDatabaseDriverString());
 
         if ($resolver = $this->getIncludeResolverForObject($repository)) {
-
             $resolver->setResourceAdapterFactory($adapterFactory);
-
             $store->setIncludeResolver($resolver);
+        }
+
+        if ($decorator = $this->getIncludeDecoratorForObject($repository)) {
+            $store->setIncludeDecorator($decorator);
         }
 
         $store->setRepository($repository);
@@ -300,6 +304,39 @@ class DataStoreFactory implements DataStoreFactoryInterface
      */
     protected function getIncludeResolverForObject($object)
     {
+        return app(IncludeResolver::class);
+    }
+
+    /**
+     * @param object $object
+     * @return IncludeDecoratorInterface
+     */
+    protected function getIncludeDecoratorForObject($object)
+    {
+        $model = $this->resolveObjectToModelInstance($object);
+
+        $decoratorClass = config(
+            'datastore.include.decorator.model-map.' . get_class($model),
+            config('datastore.include.decorator.default')
+        );
+
+        if ( ! $decoratorClass) {
+            return null;
+        }
+
+        $decorator = app($decoratorClass);
+
+        $decorator->setModel($model);
+
+        return $decorator;
+    }
+
+    /**
+     * @param object $object
+     * @return Model
+     */
+    protected function resolveObjectToModelInstance($object)
+    {
         if ($object instanceof BaseRepositoryInterface) {
             $object = $object->makeModel(false);
 
@@ -312,11 +349,11 @@ class DataStoreFactory implements DataStoreFactoryInterface
 
         // @codeCoverageIgnoreStart
         if ( ! ($object instanceof Model)) {
-            throw new RuntimeException('Unsupported object for building include resolver');
+            throw new RuntimeException('Unsupported object for building dependency');
         }
         // @codeCoverageIgnoreEnd
 
-        return app(IncludeResolver::class);
+        return $object;
     }
 
     /**

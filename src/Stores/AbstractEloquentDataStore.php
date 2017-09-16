@@ -7,6 +7,7 @@ use Czim\DataStore\Contracts\Context\ContextInterface;
 use Czim\DataStore\Contracts\Resource\ResourceAdapterInterface;
 use Czim\DataStore\Contracts\Stores\DataStoreInterface;
 use Czim\DataStore\Contracts\Stores\Filtering\FilterStrategyFactoryInterface;
+use Czim\DataStore\Contracts\Stores\Includes\IncludeDecoratorInterface;
 use Czim\DataStore\Contracts\Stores\Includes\IncludeResolverInterface;
 use Czim\DataStore\Contracts\Stores\Manipulation\DataManipulatorInterface;
 use Czim\DataStore\Contracts\Stores\Sorting\SortStrategyFactoryInterface;
@@ -15,6 +16,7 @@ use Czim\DataStore\Enums\SortStrategyEnum;
 use Czim\DataStore\Exceptions\FeatureNotSupportedException;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
@@ -32,6 +34,14 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
      * @var IncludeResolverInterface
      */
     protected $includeResolver;
+
+    /**
+     * This decorator is optional and may be used to turn string includes into closures,
+     * add default includes, etc.
+     *
+     * @var IncludeDecoratorInterface|null
+     */
+    protected $includeDecorator;
 
     /**
      * @var DataManipulatorInterface|null
@@ -56,6 +66,13 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
      * @var array
      */
     protected $includes = [];
+
+    /**
+     * Whether includes are queued for a collection query (as opposed to a single).
+     *
+     * @var bool
+     */
+    protected $includeForMany = false;
 
     /**
      * The default page size to use if none specified.
@@ -93,6 +110,19 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
     public function setIncludeResolver(IncludeResolverInterface $resolver)
     {
         $this->includeResolver = $resolver;
+
+        return $this;
+    }
+
+    /**
+     * Sets the include decorator instance.
+     *
+     * @param IncludeDecoratorInterface $decorator
+     * @return $this
+     */
+    public function setIncludeDecorator(IncludeDecoratorInterface $decorator)
+    {
+        $this->includeDecorator = $decorator;
 
         return $this;
     }
@@ -147,7 +177,7 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
      */
     public function getById($id, $includes = [])
     {
-        $this->queueIncludes($includes);
+        $this->queueIncludes($includes, false);
 
         return $this->retrieveById($id);
     }
@@ -161,7 +191,7 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
      */
     public function getManyById(array $ids, $includes = [])
     {
-        $this->queueIncludes($includes);
+        $this->queueIncludes($includes, true);
 
         return $this->retrieveManyById($ids);
     }
@@ -175,7 +205,7 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
      */
     public function getByContext(ContextInterface $context, $includes = [])
     {
-        $this->queueIncludes($includes);
+        $this->queueIncludes($includes, true);
 
         $query = $this->retrieveQuery();
 
@@ -383,15 +413,18 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
     //      Includes and Nested data
     // ------------------------------------------------------------------------------
 
+
     /**
      * Prepares datastore to eager load the given includes.
      *
      * @param array $includes
+     * @param bool  $many
      * @return $this
      */
-    protected function queueIncludes(array $includes)
+    protected function queueIncludes(array $includes, $many = false)
     {
-        $this->includes = $includes;
+        $this->includeForMany = (bool) $many;
+        $this->includes       = $includes;
 
         return $this;
     }
@@ -408,10 +441,16 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
     protected function resolveIncludesForEagerLoading(array $includes)
     {
         if (empty($includes)) {
-            return [];
+            $includes = [];
+        } else {
+            $includes = $this->includeResolver->resolve($includes);
         }
 
-        return $this->includeResolver->resolve($includes);
+        if ( ! $this->includeDecorator) {
+            return $includes;
+        }
+
+        return $this->includeDecorator->decorate($includes, $this->includeForMany);
     }
 
 
