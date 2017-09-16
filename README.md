@@ -72,6 +72,53 @@ For any other implementation, you're encouraged to write your own adapter. This 
 The context for retrieving information (filters, sorting, pagination) is defined in interfaces. A `RequestContext` object may be filled with data in any way, and then passed into the data store to restrict or sort the results. No specific implementation is assumed for this.
 
 
+### Includes
+
+By default, the resource (adapter) and client input determine the includes that will be used for eager loading. Eager loading is then performed on the basis of simple string relation names as `with()` parameters. 
+
+For more flexibility, it is possible to configure include decorators to further control eager loading. 
+To make use of this:
+ 
+ 1. Write an implementation of `Czim\DataStore\Contracts\Stores\Includes\IncludeDecoratorInterface`.
+ 2. Configure this class in the `datastore.php` configuration file:
+     - Either as the default include decorator, in `datastore.include.decorator.default`,
+     - or mapped for a specific class under `datastore.include.decorator.model-map.<your model class>`.   
+
+The `decorate()` method on the decorator will be fed a resolved array of dot-notated include strings, that can be manipulated and returned as desired.
+
+Example:
+```php
+use Czim\DataStore\Contracts\Stores\Includes\IncludeDecoratorInterface;
+use Illuminate\Database\Eloquent\Model;
+
+class CustomIncludeDecorator implements IncludeDecoratorInterface
+{
+    public function setModel(Model $model)
+    {
+        // Ignore or store and use the model as desired. 
+    }
+    
+    public function decorate(array $includes, $many = false)
+    {
+        // Replace a specific include with a closure to eager load with specific columns.
+        if (in_array('someRelation', $includes)) {
+            $includes = array_diff($includes, ['someRelation']);
+            $includes['someRelation'] = function ($query) {
+                return $query->select(['id', 'title']);
+            };
+        }
+        
+        // Never eager load a specific relation.
+        $includes = array_diff($includes, ['neverEagerLoadThis.relation']);
+        
+        // Always eager load some specific relation.
+        $includes[] = 'translations';
+    
+        return $includes;
+    }
+}
+```
+
 ## Contributing
 
 Please see [CONTRIBUTING](CONTRIBUTING.md) for details.
