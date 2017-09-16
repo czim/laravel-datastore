@@ -20,9 +20,7 @@ class TestIncludeDecorator implements IncludeDecoratorInterface
      */
     public function setModel(Model $model)
     {
-        $this->model;
-
-        return $this;
+        $this->model = $model;
     }
 
     /**

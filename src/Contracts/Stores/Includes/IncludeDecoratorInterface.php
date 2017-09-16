@@ -10,7 +10,6 @@ interface IncludeDecoratorInterface
      * Sets the parent model to which the top-level includes are related.
      *
      * @param Model $model
-     * @return $this
      */
     public function setModel(Model $model);
 
