@@ -7,6 +7,7 @@ use Czim\DataStore\Context\SortKey;
 use Czim\DataStore\Contracts\Resource\ResourceAdapterInterface;
 use Czim\DataStore\Contracts\Stores\Filtering\FilterStrategyFactoryInterface;
 use Czim\DataStore\Contracts\Stores\Filtering\FilterStrategyInterface;
+use Czim\DataStore\Contracts\Stores\Includes\IncludeDecoratorInterface;
 use Czim\DataStore\Contracts\Stores\Includes\IncludeResolverInterface;
 use Czim\DataStore\Contracts\Stores\Manipulation\DataManipulatorInterface;
 use Czim\DataStore\Contracts\Stores\Sorting\SortStrategyFactoryInterface;
@@ -32,6 +33,16 @@ class EloquentDataStoreTest extends ProvisionedTestCase
         $store = new EloquentDataStore;
 
         static::assertSame($store, $store->setResourceAdapter($this->getMockAdapter()));
+    }
+
+    /**
+     * @test
+     */
+    function it_takes_an_include_decorator()
+    {
+        $store = new EloquentDataStore;
+
+        static::assertSame($store, $store->setIncludeDecorator($this->getMockIncludeDecorator()));
     }
 
     /**
@@ -280,6 +291,11 @@ class EloquentDataStoreTest extends ProvisionedTestCase
         static::assertEquals(1, $result->items()[0]->id);
     }
 
+
+    // ------------------------------------------------------------------------------
+    //      Includes
+    // ------------------------------------------------------------------------------
+
     /**
      * @test
      */
@@ -308,7 +324,100 @@ class EloquentDataStoreTest extends ProvisionedTestCase
         static::assertTrue($result->relationLoaded('testRelatedModels'), 'Eager loading not applied');
         static::assertTrue($result->relationLoaded('testMorphRelatedModels'), 'Eager loading not applied');
     }
-    
+
+    /**
+     * @test
+     * @expectedException \InvalidArgumentException
+     */
+    function it_throws_an_exception_for_detach_by_id_if_include_could_not_be_resolved()
+    {
+        $parent = new TestPost;
+
+        $store = new EloquentDataStore;
+
+        $manipulator = $this->getMockManipulator();
+        $manipulator->shouldReceive('detachRelatedRecordsById')->never()->andReturn(true);
+
+        $adapter = $this->getMockAdapter();
+        $adapter->shouldReceive('dataKeyForInclude')->once()->with('include')->andReturn(false);
+
+        $store->setManipulator($manipulator);
+        $store->setResourceAdapter($adapter);
+
+        $store->detachRelatedRecordsById($parent, 'include', [ 1 ]);
+    }
+
+    /**
+     * @test
+     */
+    function it_decorates_includes_if_an_include_decorator_is_set()
+    {
+        $this->setUpRelatedDatabase();
+
+        $model = $this->createRelatedTestModel();
+
+        $adapter   = $this->getMockAdapter();
+        $resolver  = $this->getMockIncludeResolver();
+        $decorator = $this->getMockIncludeDecorator();
+
+        $store = new EloquentDataStore;
+
+        $store->setModel(new TestModel);
+        $store->setResourceAdapter($adapter);
+        $store->setIncludeResolver($resolver);
+        $store->setIncludeDecorator($decorator);
+
+        $resolver->shouldReceive('resolve')->with(['relation'])->andReturn(['testRelatedModels']);
+
+        $decorator->shouldReceive('decorate')
+            ->with(['testRelatedModels'], false)
+            ->andReturn(['testRelatedModels', 'testMorphRelatedModels']);
+
+        /** @var TestModel $result */
+        $result = $store->getById($model->getKey(), ['relation']);
+
+        static::assertInstanceOf(TestModel::class, $result);
+        static::assertEquals($model->getKey(), $result->getKey());
+        static::assertTrue($result->relationLoaded('testRelatedModels'), 'Eager loading not applied');
+        static::assertTrue($result->relationLoaded('testMorphRelatedModels'), 'Eager loading not applied');
+    }
+
+    /**
+     * @test
+     */
+    function it_decorates_includes_for_many_if_an_include_decorator_is_set()
+    {
+        $this->setUpRelatedDatabase();
+
+        $model = $this->createRelatedTestModel();
+
+        $adapter   = $this->getMockAdapter();
+        $resolver  = $this->getMockIncludeResolver();
+        $decorator = $this->getMockIncludeDecorator();
+
+        $store = new EloquentDataStore;
+
+        $store->setModel(new TestModel);
+        $store->setResourceAdapter($adapter);
+        $store->setIncludeResolver($resolver);
+        $store->setIncludeDecorator($decorator);
+
+        $resolver->shouldReceive('resolve')->with(['relation'])->andReturn(['testRelatedModels']);
+
+        $decorator->shouldReceive('decorate')
+            ->with(['testRelatedModels'], true)
+            ->andReturn(['testRelatedModels', 'testMorphRelatedModels']);
+
+        /** @var TestModel $result */
+        $result = $store->getManyById([ $model->getKey() ], ['relation']);
+
+        static::assertInstanceOf(Collection::class, $result);
+        static::assertInstanceOf(TestModel::class, $result->first());
+        static::assertEquals($model->getKey(), $result->first()->getKey());
+        static::assertTrue($result->first()->relationLoaded('testRelatedModels'), 'Eager loading not applied');
+        static::assertTrue($result->first()->relationLoaded('testMorphRelatedModels'), 'Eager loading not applied');
+    }
+
 
     // ------------------------------------------------------------------------------
     //      Manipulation (passthru)
@@ -557,27 +666,6 @@ class EloquentDataStoreTest extends ProvisionedTestCase
         static::assertTrue($store->detachRelatedRecordsById($parent, 'include', [ 1 ]));
     }
 
-    /**
-     * @test
-     * @expectedException \InvalidArgumentException
-     */
-    function it_throws_an_exception_for_detach_by_id_if_include_could_not_be_resolved()
-    {
-        $parent = new TestPost;
-
-        $store = new EloquentDataStore;
-
-        $manipulator = $this->getMockManipulator();
-        $manipulator->shouldReceive('detachRelatedRecordsById')->never()->andReturn(true);
-
-        $adapter = $this->getMockAdapter();
-        $adapter->shouldReceive('dataKeyForInclude')->once()->with('include')->andReturn(false);
-
-        $store->setManipulator($manipulator);
-        $store->setResourceAdapter($adapter);
-
-        $store->detachRelatedRecordsById($parent, 'include', [ 1 ]);
-    }
 
     /**
      * @return Mockery\MockInterface|Mockery\Mock|DataManipulatorInterface
@@ -633,6 +721,14 @@ class EloquentDataStoreTest extends ProvisionedTestCase
     protected function getMockSortStrategy()
     {
         return Mockery::mock(SortStrategyInterface::class);
+    }
+
+    /**
+     * @return Mockery\MockInterface|Mockery\Mock|IncludeDecoratorInterface
+     */
+    protected function getMockIncludeDecorator()
+    {
+        return Mockery::mock(IncludeDecoratorInterface::class);
     }
 
 }

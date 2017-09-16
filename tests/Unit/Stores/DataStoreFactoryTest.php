@@ -7,6 +7,9 @@ use Czim\DataStore\Contracts\Stores\Manipulation\DataManipulatorFactoryInterface
 use Czim\DataStore\Contracts\Stores\Manipulation\DataManipulatorInterface;
 use Czim\DataStore\Resource\JsonApi\JsonApiResourceAdapterFactory;
 use Czim\DataStore\Stores\DataStoreFactory;
+use Czim\DataStore\Stores\EloquentDataStore;
+use Czim\DataStore\Stores\EloquentRepositoryDataStore;
+use Czim\DataStore\Test\Helpers\Stores\Includes\TestIncludeDecorator;
 use Czim\DataStore\Test\Helpers\Stores\TestModelStore;
 use Czim\DataStore\Test\Helpers\Stores\TestRepositoryStore;
 use Czim\DataStore\Test\ProvisionedTestCase;
@@ -348,6 +351,115 @@ class DataStoreFactoryTest extends ProvisionedTestCase
         $factory->makeForObject($repository);
     }
 
+
+    // ------------------------------------------------------------------------------
+    //      Includes
+    // ------------------------------------------------------------------------------
+
+    /**
+     * @test
+     */
+    function it_uses_a_configured_default_include_decorator_class_for_a_model()
+    {
+        $isIncludeDecoratorInstantiated = false;
+
+        $factory = new DataStoreFactory;
+
+        $model = $this->getMockModel();
+
+        $this->app['config']->set('datastore.include.decorator.default', TestIncludeDecorator::class);
+
+        // Make a binding to spy on the instantiation of the decorator
+        $this->app->bind(TestIncludeDecorator::class, function () use (&$isIncludeDecoratorInstantiated) {
+            $isIncludeDecoratorInstantiated = true;
+            return new TestIncludeDecorator;
+        });
+
+        /** @var Mockery\Mock|JsonApiResourceAdapterFactory $adapterFactory */
+        $adapterFactory = Mockery::mock(JsonApiResourceAdapterFactory::class);
+        /** @var Mockery\Mock|ResourceAdapterInterface $adapter */
+        $adapter = Mockery::mock(ResourceAdapterInterface::class);
+
+        $adapterFactory->shouldReceive('makeForModel')->with($model)->andReturn($adapter);
+
+        $this->app->instance(JsonApiResourceAdapterFactory::class, $adapterFactory);
+
+        $store = $factory->makeForObject($model);
+
+        static::assertInstanceOf(EloquentDataStore::class, $store);
+        static::assertTrue($isIncludeDecoratorInstantiated, 'Include decorator was not instantiated');
+    }
+
+    /**
+     * @test
+     */
+    function it_uses_a_configured_mapped_include_decorator_class_for_a_model()
+    {
+        $isIncludeDecoratorInstantiated = false;
+
+        $factory = new DataStoreFactory;
+
+        $model = $this->getMockModel();
+
+        $this->app['config']->set('datastore.include.decorator.model-map.' . get_class($model), TestIncludeDecorator::class);
+
+        // Make a binding to spy on the instantiation of the decorator
+        $this->app->bind(TestIncludeDecorator::class, function () use (&$isIncludeDecoratorInstantiated) {
+            $isIncludeDecoratorInstantiated = true;
+            return new TestIncludeDecorator;
+        });
+
+        /** @var Mockery\Mock|JsonApiResourceAdapterFactory $adapterFactory */
+        $adapterFactory = Mockery::mock(JsonApiResourceAdapterFactory::class);
+        /** @var Mockery\Mock|ResourceAdapterInterface $adapter */
+        $adapter = Mockery::mock(ResourceAdapterInterface::class);
+
+        $adapterFactory->shouldReceive('makeForModel')->with($model)->andReturn($adapter);
+
+        $this->app->instance(JsonApiResourceAdapterFactory::class, $adapterFactory);
+
+        $store = $factory->makeForObject($model);
+
+        static::assertInstanceOf(EloquentDataStore::class, $store);
+        static::assertTrue($isIncludeDecoratorInstantiated, 'Include decorator was not instantiated');
+    }
+
+    /**
+     * @test
+     */
+    function it_uses_a_configured_mapped_include_decorator_class_for_a_model_repository()
+    {
+        $isIncludeDecoratorInstantiated = false;
+
+        $factory = new DataStoreFactory;
+
+        $model      = $this->getMockModel();
+        $repository = $this->getMockRepository();
+
+        $repository->shouldReceive('makeModel')->andReturn($model);
+
+        $this->app['config']->set('datastore.include.decorator.model-map.' . get_class($model), TestIncludeDecorator::class);
+
+        // Make a binding to spy on the instantiation of the decorator
+        $this->app->bind(TestIncludeDecorator::class, function () use (&$isIncludeDecoratorInstantiated) {
+            $isIncludeDecoratorInstantiated = true;
+            return new TestIncludeDecorator;
+        });
+
+        /** @var Mockery\Mock|JsonApiResourceAdapterFactory $adapterFactory */
+        $adapterFactory = Mockery::mock(JsonApiResourceAdapterFactory::class);
+        /** @var Mockery\Mock|ResourceAdapterInterface $adapter */
+        $adapter = Mockery::mock(ResourceAdapterInterface::class);
+
+        $adapterFactory->shouldReceive('makeForRepository')->with($repository)->andReturn($adapter);
+
+        $this->app->instance(JsonApiResourceAdapterFactory::class, $adapterFactory);
+
+        $store = $factory->makeForObject($repository);
+
+        static::assertInstanceOf(EloquentRepositoryDataStore::class, $store);
+        static::assertTrue($isIncludeDecoratorInstantiated, 'Include decorator was not instantiated');
+    }
 
     // ------------------------------------------------------------------------------
     //      Misc
