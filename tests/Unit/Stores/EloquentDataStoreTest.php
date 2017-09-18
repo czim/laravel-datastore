@@ -5,6 +5,7 @@ use Czim\DataObject\Contracts\DataObjectInterface;
 use Czim\DataStore\Context\RequestContext;
 use Czim\DataStore\Context\SortKey;
 use Czim\DataStore\Contracts\Resource\ResourceAdapterInterface;
+use Czim\DataStore\Contracts\Stores\Filtering\FilterHandlerInterface;
 use Czim\DataStore\Contracts\Stores\Filtering\FilterStrategyFactoryInterface;
 use Czim\DataStore\Contracts\Stores\Filtering\FilterStrategyInterface;
 use Czim\DataStore\Contracts\Stores\Includes\IncludeDecoratorInterface;
@@ -43,6 +44,19 @@ class EloquentDataStoreTest extends ProvisionedTestCase
         $store = new EloquentDataStore;
 
         static::assertSame($store, $store->setIncludeDecorator($this->getMockIncludeDecorator()));
+    }
+
+    /**
+     * @test
+     */
+    function it_takes_and_returns_a_filter_handler()
+    {
+        $store = new EloquentDataStore;
+
+        $handler = $this->getMockFilterHandler();
+
+        static::assertSame($store, $store->setFilterHandler($handler));
+        static::assertSame($handler, $store->getFilterHandler());
     }
 
     /**
@@ -172,13 +186,13 @@ class EloquentDataStoreTest extends ProvisionedTestCase
         $store->setModel(new TestModel);
         $store->setResourceAdapter($adapter);
 
-        $model   = $this->createTestModel();
-        $another = $this->createTestModel();
+        $this->createTestModel();
+        $this->createTestModel();
         $this->createTestModel();
 
         $context = new RequestContext;
         $context->filters = [
-            'id' => [ $model->getKey(), $another->getKey() ],
+            'id' => [1, 2],
         ];
         $context->sorting = [ new SortKey('id', true) ];
         $context->page_size = 1;
@@ -189,15 +203,13 @@ class EloquentDataStoreTest extends ProvisionedTestCase
         $adapter->shouldReceive('availableSortKeys')->once()->andReturn(['id']);
         $adapter->shouldReceive('dataKeyForAttribute')->with('id')->andReturn('id');
 
-        $filterStrategy = $this->getMockFilterStrategy();
-        $filterStrategy->shouldReceive('apply')->once()->andReturnUsing(function ($query, $column, $value) {
+        $filter = $this->getMockFilterHandler();
+        $filter->shouldReceive('setData')->once()->andReturnSelf();
+        $filter->shouldReceive('apply')->once()->andReturnUsing(function ($query) {
             /** @var Builder $query */
-            return $query->whereIn($column, $value);
+            return $query->whereIn('id', [1, 2]);
         });
-
-        $strategyFactory = $this->getMockFilterStrategyFactory();
-        $strategyFactory->shouldReceive('driver')->andReturnSelf();
-        $strategyFactory->shouldReceive('make')->andReturn($filterStrategy);
+        $store->setFilterHandler($filter);
 
         $sortStrategy = $this->getMockSortStrategy();
         $sortStrategy->shouldReceive('apply')->once()->andReturnUsing(function ($query, $column, $reverse) {
@@ -209,7 +221,6 @@ class EloquentDataStoreTest extends ProvisionedTestCase
         $sortFactory->shouldReceive('driver')->andReturnSelf();
         $sortFactory->shouldReceive('make')->andReturn($sortStrategy);
 
-        $this->app->instance(FilterStrategyFactoryInterface::class, $strategyFactory);
         $this->app->instance(SortStrategyFactoryInterface::class, $sortFactory);
 
 
@@ -239,8 +250,8 @@ class EloquentDataStoreTest extends ProvisionedTestCase
         $store->setModel(new TestModel);
         $store->setResourceAdapter($adapter);
 
-        $model   = $this->createTestModel();
-        $another = $this->createTestModel();
+        $this->createTestModel();
+        $this->createTestModel();
         $this->createTestModel();
 
         $context = new RequestContext;
@@ -249,20 +260,18 @@ class EloquentDataStoreTest extends ProvisionedTestCase
 
         // Prepare contextual mocks
         $adapter->shouldReceive('availableFilterKeys')->andReturn(['id']);
-        $adapter->shouldReceive('defaultFilters')->once()->andReturn(['id' => [ $model->getKey(), $another->getKey() ]]);
+        $adapter->shouldReceive('defaultFilters')->once()->andReturn(['id' => [1, 2]]);
         $adapter->shouldReceive('availableSortKeys')->andReturn(['id']);
         $adapter->shouldReceive('defaultSorting')->once()->andReturn([ new SortKey('id', true) ]);
         $adapter->shouldReceive('dataKeyForAttribute')->with('id')->andReturn('id');
 
-        $filterStrategy = $this->getMockFilterStrategy();
-        $filterStrategy->shouldReceive('apply')->once()->andReturnUsing(function ($query, $column, $value) {
+        $filter = $this->getMockFilterHandler();
+        $filter->shouldReceive('setData')->once()->andReturnSelf();
+        $filter->shouldReceive('apply')->once()->andReturnUsing(function ($query) {
             /** @var Builder $query */
-            return $query->whereIn($column, $value);
+            return $query->whereIn('id', [1, 2]);
         });
-
-        $strategyFactory = $this->getMockFilterStrategyFactory();
-        $strategyFactory->shouldReceive('driver')->andReturnSelf();
-        $strategyFactory->shouldReceive('make')->andReturn($filterStrategy);
+        $store->setFilterHandler($filter);
 
         $sortStrategy = $this->getMockSortStrategy();
         $sortStrategy->shouldReceive('apply')->once()->andReturnUsing(function ($query, $column, $reverse) {
@@ -274,7 +283,6 @@ class EloquentDataStoreTest extends ProvisionedTestCase
         $sortFactory->shouldReceive('driver')->andReturnSelf();
         $sortFactory->shouldReceive('make')->andReturn($sortStrategy);
 
-        $this->app->instance(FilterStrategyFactoryInterface::class, $strategyFactory);
         $this->app->instance(SortStrategyFactoryInterface::class, $sortFactory);
 
 
@@ -705,6 +713,14 @@ class EloquentDataStoreTest extends ProvisionedTestCase
     protected function getMockSortStrategyFactory()
     {
         return Mockery::mock(SortStrategyFactoryInterface::class);
+    }
+
+    /**
+     * @return Mockery\MockInterface|Mockery\Mock|FilterHandlerInterface
+     */
+    protected function getMockFilterHandler()
+    {
+        return Mockery::mock(FilterHandlerInterface::class);
     }
 
     /**
