@@ -7,9 +7,12 @@ use Czim\DataStore\Contracts\Stores\Filtering\FilterStrategyFactoryInterface;
 use Czim\DataStore\Enums\FilterStrategyEnum;
 use Czim\DataStore\Stores\Filtering\Data\DefaultFilterData;
 use Czim\Filter\Filter;
+use Exception;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\Relation;
 use RuntimeException;
+use UnexpectedValueException;
 
 class DefaultFilter extends Filter implements FilterHandlerInterface
 {
@@ -173,9 +176,12 @@ class DefaultFilter extends Filter implements FilterHandlerInterface
      */
     protected function isParameterNameForInclude($name)
     {
+        if ( ! $this->resourceAdapter) {
+            return false;
+        }
+
         return in_array($name, $this->resourceAdapter->availableIncludeKeys());
     }
-
 
     /**
      * Returns the filter strategy alias to use for a given filter key.
@@ -189,11 +195,67 @@ class DefaultFilter extends Filter implements FilterHandlerInterface
 
         return config(
             "datastore.filter.strategies.{$modelClass}",
-            config(
-                "datastore.filter.default-strategies.{$key}",
-                config('datastore.filter.default', FilterStrategyEnum::LIKE)
-            )
+            config("datastore.filter.default-strategies.{$key}", $this->determineStrategyDefault($key))
         );
+    }
+
+    /**
+     * @param string $key
+     * @return string
+     */
+    protected function determineStrategyDefault($key)
+    {
+        if ( ! $this->isParameterNameForInclude($key)) {
+            return config('datastore.filter.default', FilterStrategyEnum::LIKE);
+        }
+
+        $relationMethod = $this->resourceAdapter->dataKeyForInclude($key);
+
+        return $this->determineStrategyForRelation($relationMethod);
+    }
+
+    /**
+     * @param string $method
+     * @return string
+     */
+    protected function determineStrategyForRelation($method)
+    {
+        $relation = $this->getRelationInstanceForMethod($method);
+
+        $strategy = config('datastore.filter.default-relation-strategies.' . get_class($relation));
+
+        if ($strategy) {
+            return $strategy;
+        }
+
+        return config('datastore.filter.default', FilterStrategyEnum::LIKE);
+    }
+
+    /**
+     * @param string $method
+     * @return Relation
+     */
+    protected function getRelationInstanceForMethod($method)
+    {
+        try {
+            $relation = $this->model->{$method}();
+
+        } catch (Exception $e) {
+
+            throw new UnexpectedValueException(
+                "Failed trying to get relation instance from " . get_class($this->model) . "::{$method}",
+                $e->getCode(),
+                $e
+            );
+        }
+
+        if ( ! ($relation instanceof Relation)) {
+            throw new UnexpectedValueException(
+                "Method " . get_class($this->model) . "::{$method} did not return relation instance"
+            );
+        }
+
+        return $relation;
     }
 
     /**

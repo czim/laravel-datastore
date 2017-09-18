@@ -4,6 +4,7 @@ use Czim\DataStore\Enums\FilterStrategyEnum;
 use Czim\DataStore\Enums\SortStrategyEnum;
 use Czim\DataStore\Stores\Filtering\Strategies as FilterStrategies;
 use Czim\DataStore\Stores\Sorting\Strategies as SortStrategies;
+use Illuminate\Database\Eloquent\Relations;
 
 return [
 
@@ -170,9 +171,19 @@ return [
             'slug' => FilterStrategyEnum::EXACT_CASE_INSENSITIVE,
         ],
 
+        // Defaults to use for relation methods
+
+        'default-relation-strategies' => [
+            Relations\BelongsTo::class     => FilterStrategyEnum::RELATION_SINGULAR,
+            Relations\BelongsToMany::class => FilterStrategyEnum::RELATION_PLURAL,
+            Relations\HasMany::class       => FilterStrategyEnum::RELATION_PLURAL,
+            Relations\HasOne::class        => FilterStrategyEnum::RELATION_SINGULAR,
+            Relations\MorphMany::class     => FilterStrategyEnum::RELATION_PLURAL,
+            Relations\MorphToMany::class   => FilterStrategyEnum::RELATION_PLURAL,
+        ],
+
         // Strategies per model
         'strategies' => [
-
             //App\Models\YourModel::class => [
             //],
         ],
@@ -184,6 +195,9 @@ return [
             FilterStrategyEnum::EXACT                  => FilterStrategies\ExactStrategy::class,
             FilterStrategyEnum::EXACT_CASE_INSENSITIVE => FilterStrategies\ExactStrategy::class,
             FilterStrategyEnum::EXACT_COMMA_SEPARATED  => FilterStrategies\ExactCommaSeparatedStrategy::class,
+
+            FilterStrategyEnum::RELATION_SINGULAR => FilterStrategies\RelationKeyStrategy::class,
+            FilterStrategyEnum::RELATION_PLURAL   => FilterStrategies\RelationKeyStrategy::class,
         ],
 
         // If a specific mapping for an enum value is not given for a specific driver,
