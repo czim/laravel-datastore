@@ -6,6 +6,8 @@ use Czim\DataStore\Contracts\Stores\DataStoreFactoryInterface;
 use Czim\DataStore\Contracts\Stores\DataStoreInterface;
 use Czim\DataStore\Contracts\Stores\EloquentModelDataStoreInterface;
 use Czim\DataStore\Contracts\Stores\EloquentRepositoryDataStoreInterface;
+use Czim\DataStore\Contracts\Stores\Filtering\FilterHandlerInterface;
+use Czim\DataStore\Contracts\Stores\Filtering\FilterStrategyFactoryInterface;
 use Czim\DataStore\Contracts\Stores\Includes\IncludeDecoratorInterface;
 use Czim\DataStore\Contracts\Stores\Includes\IncludeResolverInterface;
 use Czim\DataStore\Contracts\Stores\Manipulation\DataManipulatorFactoryInterface;
@@ -92,8 +94,6 @@ class DataStoreFactory implements DataStoreFactoryInterface
      */
     protected function makeForModel(Model $model)
     {
-        $adapterFactory = $this->getResourceAdapterFactory();
-
         /** @var DataStoreInterface|EloquentModelDataStoreInterface $store */
         $store = $this->getDataStoreInstance($model);
 
@@ -103,28 +103,9 @@ class DataStoreFactory implements DataStoreFactoryInterface
             );
         }
 
-        $store
-            ->setResourceAdapter($adapterFactory->makeForModel($model))
-            ->setStrategyDriver($this->getDatabaseDriverString());
-
-        if ($resolver = $this->getIncludeResolverForObject($model)) {
-            $resolver->setResourceAdapterFactory($adapterFactory);
-            $store->setIncludeResolver($resolver);
-        }
-
-        if ($decorator = $this->getIncludeDecoratorForObject($model)) {
-            $store->setIncludeDecorator($decorator);
-        }
+        $this->provisionStoreInstance($store, $model);
 
         $store->setModel($model);
-
-        if ($manipulator = $this->getDataManipulator($model)) {
-            $store->setManipulator($manipulator);
-        }
-
-        if ($pageSize = array_get($this->config, 'pagination.size')) {
-            $store->setDefaultPageSize($pageSize);
-        }
 
         $this->reset();
 
@@ -139,8 +120,6 @@ class DataStoreFactory implements DataStoreFactoryInterface
      */
     protected function makeForRepository(BaseRepositoryInterface $repository)
     {
-        $adapterFactory = $this->getResourceAdapterFactory();
-
         /** @var DataStoreInterface|EloquentRepositoryDataStoreInterface $store */
         $store = $this->getDataStoreInstance($repository);
 
@@ -150,32 +129,64 @@ class DataStoreFactory implements DataStoreFactoryInterface
             );
         }
 
-        $store
-            ->setResourceAdapter($adapterFactory->makeForRepository($repository))
-            ->setStrategyDriver($this->getDatabaseDriverString());
+        $this->provisionStoreInstance($store, $repository);
 
-        if ($resolver = $this->getIncludeResolverForObject($repository)) {
+        $store->setRepository($repository);
+
+        $this->reset();
+
+        return $store;
+    }
+
+    /**
+     * @param DataStoreInterface $store
+     * @param object             $object
+     */
+    protected function provisionStoreInstance(DataStoreInterface $store, $object)
+    {
+        $adapterFactory = $this->getResourceAdapterFactory();
+
+        if ($object instanceof Model) {
+            $adapter = $adapterFactory->makeForModel($object);
+        } elseif ($object instanceof BaseRepositoryInterface) {
+            $adapter = $adapterFactory->makeForRepository($object);
+        } else {
+            // @codeCoverageIgnoreStart
+            throw new RuntimeException("Unknown object type, could not make resource adapter");
+            // @codeCoverageIgnoreEnd
+        }
+
+        $driverString = $this->getDatabaseDriverString();
+
+        $store
+            ->setResourceAdapter($adapter)
+            ->setStrategyDriver($driverString);
+
+        if ($resolver = $this->getIncludeResolverForObject($object)) {
             $resolver->setResourceAdapterFactory($adapterFactory);
             $store->setIncludeResolver($resolver);
         }
 
-        if ($decorator = $this->getIncludeDecoratorForObject($repository)) {
+        if ($decorator = $this->getIncludeDecoratorForObject($object)) {
             $store->setIncludeDecorator($decorator);
         }
 
-        $store->setRepository($repository);
+        if ($filter = $this->getFilterHandlerForObject($object)) {
+            $filter
+                ->setResourceAdapter($adapter)
+                ->setStrategyFactory(
+                    app(FilterStrategyFactoryInterface::class)->driver($driverString)
+                );
+            $store->setFilterHandler($filter);
+        }
 
-        if ($manipulator = $this->getDataManipulator($repository)) {
+        if ($manipulator = $this->getDataManipulator($object)) {
             $store->setManipulator($manipulator);
         }
 
         if ($pageSize = array_get($this->config, 'pagination.size')) {
             $store->setDefaultPageSize($pageSize);
         }
-
-        $this->reset();
-
-        return $store;
     }
 
     /**
@@ -329,6 +340,32 @@ class DataStoreFactory implements DataStoreFactoryInterface
         $decorator->setModel($model);
 
         return $decorator;
+    }
+
+    /**
+     * @param object $object
+     * @return FilterHandlerInterface|null
+     */
+    protected function getFilterHandlerForObject($object)
+    {
+        $model = $this->resolveObjectToModelInstance($object);
+
+        $filterClass = config(
+            'datastore.filter.handler.model-map.' . get_class($model),
+            config('datastore.filter.handler.default')
+        );
+
+        // @codeCoverageIgnoreStart
+        if ( ! $filterClass) {
+            return null;
+        }
+        // @codeCoverageIgnoreEnd
+
+        $filter = app($filterClass);
+
+        $filter->setModel($model);
+
+        return $filter;
     }
 
     /**

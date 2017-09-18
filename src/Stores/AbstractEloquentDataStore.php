@@ -6,6 +6,7 @@ use Czim\DataStore\Context\SortKey;
 use Czim\DataStore\Contracts\Context\ContextInterface;
 use Czim\DataStore\Contracts\Resource\ResourceAdapterInterface;
 use Czim\DataStore\Contracts\Stores\DataStoreInterface;
+use Czim\DataStore\Contracts\Stores\Filtering\FilterHandlerInterface;
 use Czim\DataStore\Contracts\Stores\Filtering\FilterStrategyFactoryInterface;
 use Czim\DataStore\Contracts\Stores\Includes\IncludeDecoratorInterface;
 use Czim\DataStore\Contracts\Stores\Includes\IncludeResolverInterface;
@@ -16,11 +17,11 @@ use Czim\DataStore\Enums\SortStrategyEnum;
 use Czim\DataStore\Exceptions\FeatureNotSupportedException;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Eloquent\Model;
-use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
+use RuntimeException;
 
 abstract class AbstractEloquentDataStore implements DataStoreInterface
 {
@@ -42,6 +43,11 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
      * @var IncludeDecoratorInterface|null
      */
     protected $includeDecorator;
+
+    /**
+     * @var FilterHandlerInterface|null
+     */
+    protected $filter;
 
     /**
      * @var DataManipulatorInterface|null
@@ -125,6 +131,29 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
         $this->includeDecorator = $decorator;
 
         return $this;
+    }
+
+    /**
+     * Sets the filter handlers.
+     *
+     * @param FilterHandlerInterface $filter
+     * @return $this
+     */
+    public function setFilterHandler(FilterHandlerInterface $filter)
+    {
+        $this->filter = $filter;
+
+        return $this;
+    }
+
+    /**
+     * Returns the filter handler.
+     *
+     * @return FilterHandlerInterface|null
+     */
+    public function getFilterHandler()
+    {
+        return $this->filter;
     }
 
     /**
@@ -239,8 +268,8 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
     /**
      * Applies filters to a query.
      *
-     * @param Builder    $query
-     * @param array      $filters
+     * @param Builder|EloquentBuilder $query
+     * @param array                   $filters
      * @return Builder
      */
     protected function applyFilters($query, array $filters)
@@ -256,46 +285,18 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
             return in_array($key, $available);
         }, ARRAY_FILTER_USE_KEY);
 
-        foreach ($filters as $key => $value) {
-            $this->applyFilterValue($query, $this->determineFilterStrategyForKey($key), $key, $value);
+
+        if ( ! count($filters)) {
+            return $query;
         }
 
-        return $query;
-    }
+        if ( ! $this->filter) {
+            throw new RuntimeException("No filter handler set, filters cannot be applied");
+        }
 
-    /**
-     * Applies a single filter value to a query.
-     *
-     * @param Builder $query
-     * @param string  $strategy
-     * @param string  $key
-     * @param mixed   $value
-     * @return Builder
-     */
-    protected function applyFilterValue($query, $strategy, $key, $value)
-    {
-        $attribute = $this->resourceAdapter->dataKeyForAttribute($key);
-
-        $filter = $this->makeFilterStrategyInstance($strategy);
-
-        return $filter->apply($query, $attribute, $value);
-    }
-
-    /**
-     * Returns the filter strategy alias to use for a given filter key.
-     *
-     * @param string $key
-     * @return string
-     */
-    protected function determineFilterStrategyForKey($key)
-    {
-        return config(
-            "datastore.filter.strategies.{$this->modelClass}",
-            config(
-                "datastore.filter.default-strategies.{$key}",
-                config('datastore.filter.default', FilterStrategyEnum::LIKE)
-            )
-        );
+        return $this->filter
+            ->setData($filters, $available)
+            ->apply($query);
     }
 
     /**
@@ -386,18 +387,6 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
 
     /**
      * @param string $strategy
-     * @return \Czim\DataStore\Contracts\Stores\Filtering\FilterStrategyInterface
-     */
-    protected function makeFilterStrategyInstance($strategy)
-    {
-        /** @var FilterStrategyFactoryInterface $factory */
-        $factory = app(FilterStrategyFactoryInterface::class);
-
-        return $factory->driver($this->strategyDriver)->make($strategy);
-    }
-
-    /**
-     * @param string $strategy
      * @return \Czim\DataStore\Contracts\Stores\Sorting\SortStrategyInterface
      */
     protected function makeSortStrategyInstance($strategy)
@@ -412,7 +401,6 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
     // ------------------------------------------------------------------------------
     //      Includes and Nested data
     // ------------------------------------------------------------------------------
-
 
     /**
      * Prepares datastore to eager load the given includes.

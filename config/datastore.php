@@ -129,10 +129,11 @@ return [
     | Filtering
     |--------------------------------------------------------------------------
     |
-    | Defines the filter strategies to be used for model attributes.
-    |
-    | Strategies itself is keyed by model class name, and values for those keys should be
-    | an associative array mapping attribute names to their respective strategies. E.g:
+    | The strategies section defines the filter strategies to be used for model
+    | attributes.
+    | Strategies itself is keyed by model class name, and values for those keys
+    | should be an associative array mapping attribute names to their
+    | respective strategies. E.g:
     |
     |      'strategies' => [
     |          \YourModel\ClassName::class => [
@@ -140,12 +141,25 @@ return [
     |          ],
     |      ],
     |
-    | Note that the data attribute keys here should refer to f.i. Eloquent model attributes,
-    | *not* JSON-API data keys!
+    | Note that the data attribute keys here should refer to f.i. Eloquent
+    | model attributes, *not* JSON-API data keys!
     |
     */
 
     'filter' => [
+
+        // The top-level filter handling class may also be replaced or mapped,
+        // independently of specific per key strategies.
+        // Must implement Czim\Filter\Contracts\FilterInterface.
+        'handler' => [
+            'default' => \Czim\DataStore\Stores\Filtering\DefaultFilter::class,
+
+            // Optionally mapped top-level filter class mapped per model FQN
+            'model-map' => [
+                //App\Models\YourModel::class => App\Filters\YourFilter::class,
+            ],
+        ],
+
 
         // The default / fallback strategy
         'default' => FilterStrategyEnum::LIKE_CASE_INSENSITIVE,

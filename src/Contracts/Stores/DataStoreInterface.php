@@ -2,6 +2,7 @@
 namespace Czim\DataStore\Contracts\Stores;
 
 use Czim\DataStore\Contracts\Resource\ResourceAdapterInterface;
+use Czim\DataStore\Contracts\Stores\Filtering\FilterHandlerInterface;
 use Czim\DataStore\Contracts\Stores\Includes\IncludeDecoratorInterface;
 use Czim\DataStore\Contracts\Stores\Includes\IncludeResolverInterface;
 use Czim\DataStore\Contracts\Stores\Manipulation\DataManipulatorInterface;
@@ -38,6 +39,21 @@ interface DataStoreInterface extends DataStoreRetrieveInterface, DataStoreUpdate
      * @return $this
      */
     public function setIncludeDecorator(IncludeDecoratorInterface $decorator);
+
+    /**
+     * Sets the filter handlers.
+     *
+     * @param FilterHandlerInterface $filter
+     * @return $this
+     */
+    public function setFilterHandler(FilterHandlerInterface $filter);
+
+    /**
+     * Returns the filter handler.
+     *
+     * @return FilterHandlerInterface|null
+     */
+    public function getFilterHandler();
 
     /**
      * Sets the database strategy driver key.
