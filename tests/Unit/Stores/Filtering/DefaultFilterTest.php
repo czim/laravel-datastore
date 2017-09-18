@@ -9,6 +9,7 @@ use Czim\DataStore\Stores\Filtering\DefaultFilter;
 use Czim\DataStore\Test\Helpers\Models\TestModel;
 use Czim\DataStore\Test\TestCase;
 use Illuminate\Database\Eloquent\Builder;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Mockery;
 
 class DefaultFilterTest extends TestCase
@@ -99,39 +100,8 @@ class DefaultFilterTest extends TestCase
         $filter->setFilterData(new DefaultFilterData(['some' => 'value'], ['some' => null]));
 
         $adapter = $this->getMockAdapter();
-        $adapter->shouldReceive('availableIncludeKeys')->once()->andReturn(['something_else']);
+        $adapter->shouldReceive('availableIncludeKeys')->atleast()->once()->andReturn(['something_else']);
         $adapter->shouldReceive('dataKeyForAttribute')->once()->with('some')->andReturn('some_resolved');
-        $filter->setResourceAdapter($adapter);
-
-        $query = $this->getMockQueryBuilder();
-
-        $strategy = $this->getMockStrategy();
-        $strategy->shouldReceive('apply')
-            ->once()
-            ->with($query, 'some_resolved', 'value')
-            ->andReturnUsing(function ($query) {
-                /** @var Builder $query */
-                return $query;
-            });
-
-        $factory = $this->getMockStrategyFactory();
-        $factory->shouldReceive('make')->once()->with('like')->andReturn($strategy);
-        $filter->setStrategyFactory($factory);
-
-        static::assertSame($query, $filter->apply($query));
-    }
-
-    /**
-     * @test
-     */
-    function it_applies_a_strategy_for_a_filtered_include_parameter()
-    {
-        $filter = new DefaultFilter;
-        $filter->setFilterData(new DefaultFilterData(['some' => 'value'], ['some' => null]));
-
-        $adapter = $this->getMockAdapter();
-        $adapter->shouldReceive('availableIncludeKeys')->once()->andReturn(['some']);
-        $adapter->shouldReceive('dataKeyForInclude')->once()->with('some')->andReturn('some_resolved');
         $filter->setResourceAdapter($adapter);
 
         $query = $this->getMockQueryBuilder();
@@ -190,7 +160,7 @@ class DefaultFilterTest extends TestCase
         $filter->setFilterData(new DefaultFilterData(['some' => 'value'], ['some' => null]));
 
         $adapter = $this->getMockAdapter();
-        $adapter->shouldReceive('availableIncludeKeys')->once()->andReturn(['something_else']);
+        $adapter->shouldReceive('availableIncludeKeys')->atLeast()->once()->andReturn(['something_else']);
         $adapter->shouldReceive('dataKeyForAttribute')->once()->with('some')->andReturn('some_resolved');
         $filter->setResourceAdapter($adapter);
 
@@ -218,6 +188,120 @@ class DefaultFilterTest extends TestCase
         $filter->apply($query);
     }
 
+
+    // ------------------------------------------------------------------------------
+    //      Include filtering
+    // ------------------------------------------------------------------------------
+
+    /**
+     * @test
+     */
+    function it_applies_a_strategy_for_a_filtered_include_parameter()
+    {
+        $this->app['config']->set('datastore.filter.default-relation-strategies.' . HasMany::class, 'relation-filter-hasmany');
+
+        $filter = new DefaultFilter;
+        $filter->setFilterData(new DefaultFilterData(['some' => 'value'], ['some' => null]));
+        $filter->setModel(new TestModel);
+
+        $adapter = $this->getMockAdapter();
+        $adapter->shouldReceive('availableIncludeKeys')->atLeast()->once()->andReturn(['some']);
+        $adapter->shouldReceive('dataKeyForInclude')->atLeast()->once()->with('some')->andReturn('testRelatedModels');
+        $filter->setResourceAdapter($adapter);
+
+        $query = $this->getMockQueryBuilder();
+
+        $strategy = $this->getMockStrategy();
+        $strategy->shouldReceive('apply')
+            ->once()
+            ->with($query, 'testRelatedModels', 'value')
+            ->andReturnUsing(function ($query) {
+                /** @var Builder $query */
+                return $query;
+            });
+        $this->app->instance('relation-filter-hasmany', $strategy);
+
+        $factory = $this->getMockStrategyFactory();
+        $factory->shouldReceive('make')->once()->with('relation-filter-hasmany')->andReturn($strategy);
+        $filter->setStrategyFactory($factory);
+
+        static::assertSame($query, $filter->apply($query));
+    }
+
+    /**
+     * @test
+     */
+    function it_applies_a_strategy_for_a_filtered_include_parameter_falling_back_to_deafult()
+    {
+        $this->app['config']->set('datastore.filter.default', 'relation-filter-hasmany');
+
+        $filter = new DefaultFilter;
+        $filter->setFilterData(new DefaultFilterData(['some' => 'value'], ['some' => null]));
+        $filter->setModel(new TestModel);
+
+        $adapter = $this->getMockAdapter();
+        $adapter->shouldReceive('availableIncludeKeys')->atLeast()->once()->andReturn(['some']);
+        $adapter->shouldReceive('dataKeyForInclude')->atLeast()->once()->with('some')->andReturn('testRelatedModels');
+        $filter->setResourceAdapter($adapter);
+
+        $query = $this->getMockQueryBuilder();
+
+        $strategy = $this->getMockStrategy();
+        $strategy->shouldReceive('apply')
+            ->once()
+            ->with($query, 'testRelatedModels', 'value')
+            ->andReturnUsing(function ($query) {
+                /** @var Builder $query */
+                return $query;
+            });
+        $this->app->instance('relation-filter-hasmany', $strategy);
+
+        $factory = $this->getMockStrategyFactory();
+        $factory->shouldReceive('make')->once()->with('relation-filter-hasmany')->andReturn($strategy);
+        $filter->setStrategyFactory($factory);
+
+        static::assertSame($query, $filter->apply($query));
+    }
+
+    /**
+     * @test
+     * @expectedException \UnexpectedValueException
+     */
+    function it_throws_an_exception_applying_a_filtered_include_parameter_that_has_no_matching_relation_method()
+    {
+        $filter = new DefaultFilter;
+        $filter->setFilterData(new DefaultFilterData(['some' => 'value'], ['some' => null]));
+        $filter->setModel(new TestModel);
+
+        $adapter = $this->getMockAdapter();
+        $adapter->shouldReceive('availableIncludeKeys')->atLeast()->once()->andReturn(['some']);
+        $adapter->shouldReceive('dataKeyForInclude')->atLeast()->once()->with('some')->andReturn('does_not_exist');
+        $filter->setResourceAdapter($adapter);
+
+        $query = $this->getMockQueryBuilder();
+
+        $filter->apply($query);
+    }
+
+    /**
+     * @test
+     * @expectedException \UnexpectedValueException
+     */
+    function it_throws_an_exception_applying_a_filtered_include_parameter_that_has_a_non_relation_method()
+    {
+        $filter = new DefaultFilter;
+        $filter->setFilterData(new DefaultFilterData(['some' => 'value'], ['some' => null]));
+        $filter->setModel(new TestModel);
+
+        $adapter = $this->getMockAdapter();
+        $adapter->shouldReceive('availableIncludeKeys')->atLeast()->once()->andReturn(['some']);
+        $adapter->shouldReceive('dataKeyForInclude')->atLeast()->once()->with('some')->andReturn('notARelation');
+        $filter->setResourceAdapter($adapter);
+
+        $query = $this->getMockQueryBuilder();
+
+        $filter->apply($query);
+    }
 
     /**
      * @return Mockery\MockInterface|Mockery\Mock|ResourceAdapterInterface
