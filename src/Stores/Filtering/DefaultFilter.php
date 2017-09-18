@@ -9,6 +9,7 @@ use Czim\DataStore\Stores\Filtering\Data\DefaultFilterData;
 use Czim\Filter\Filter;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use RuntimeException;
 
 class DefaultFilter extends Filter implements FilterHandlerInterface
 {
@@ -90,8 +91,12 @@ class DefaultFilter extends Filter implements FilterHandlerInterface
      */
     public function setData(array $data, array $available = [])
     {
-        if ( ! count($available) && $this->resourceAdapter) {
-            $available = $this->resourceAdapter->availableFilterKeys();
+        if ( ! count($available)) {
+            if ($this->resourceAdapter) {
+                $available = $this->resourceAdapter->availableFilterKeys();
+            } else {
+                $available = array_keys($data);
+            }
         }
 
         $defaults = $this->buildDataDefaultsForKeys($available);
@@ -124,28 +129,51 @@ class DefaultFilter extends Filter implements FilterHandlerInterface
         // The parameter may be either a resource attribute or resource include.
         // If the parameter is custom and matches neither type, a custom strategy
         // must be used to handle it correctly.
-        if (in_array($parameterName, $this->resourceAdapter->availableIncludeKeys())) {
-            $key        = $this->resourceAdapter->dataKeyForInclude($parameterName);
-            $isRelation = true;
-        } else {
-            $key        = $this->resourceAdapter->dataKeyForAttribute($parameterName);
-            $isRelation = false;
-        }
+        $key = $this->resolveDataKeyForParameterName($parameterName);
 
         // If the parameter is for a relation, there may be nested keys
         // to be filtered on the related items, this is not currently supported.
         // ie.: comments.name = '%test%' to filter a post with comments with specific names.
         // todo?
 
-        $this->applyFilterValue(
-            $query,
-            $this->determineStrategyForKey($parameterName),
-            $key,
-            $parameterValue
-        );
-
+        if ($key) {
+            $this->applyFilterValue(
+                $query,
+                $this->determineStrategyForKey($parameterName),
+                $key,
+                $parameterValue
+            );
+            return;
+        }
 
         parent::applyParameter($parameterName, $parameterValue, $query);
+    }
+
+    /**
+     * @param string $name
+     * @return string
+     */
+    protected function resolveDataKeyForParameterName($name)
+    {
+        if ( ! $this->resourceAdapter) {
+            return $name;
+        }
+
+        if (in_array($name, $this->resourceAdapter->availableIncludeKeys())) {
+            return $this->resourceAdapter->dataKeyForInclude($name);
+        }
+
+        return $this->resourceAdapter->dataKeyForAttribute($name);
+    }
+
+    /**
+     * Returns whether a given parameter name matches for an include relation, rather than an attribute.
+     * @param string $name
+     * @return bool
+     */
+    protected function isParameterNameForInclude($name)
+    {
+        return in_array($name, $this->resourceAdapter->availableIncludeKeys());
     }
 
 
@@ -179,6 +207,12 @@ class DefaultFilter extends Filter implements FilterHandlerInterface
      */
     protected function applyFilterValue($query, $strategy, $key, $value)
     {
+        if ( ! $this->strategyFactory) {
+            throw new RuntimeException(
+                "Attempting to apply strategy '{$strategy}' without strategy factory instance set"
+            );
+        }
+
         return $this->strategyFactory->make($strategy)
             ->apply($query, $key, $value);
     }
