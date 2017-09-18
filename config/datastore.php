@@ -172,7 +172,6 @@ return [
         ],
 
         // Defaults to use for relation methods
-
         'default-relation-strategies' => [
             Relations\BelongsTo::class     => FilterStrategyEnum::RELATION_SINGULAR,
             Relations\BelongsToMany::class => FilterStrategyEnum::RELATION_PLURAL,
