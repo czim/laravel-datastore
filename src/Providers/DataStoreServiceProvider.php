@@ -4,8 +4,10 @@ namespace Czim\DataStore\Providers;
 use Czim\DataStore\Contracts\Resource\ResourceAdapterFactoryInterface;
 use Czim\DataStore\Contracts\Stores\DataStoreFactoryInterface;
 use Czim\DataStore\Contracts\Stores\Filtering\FilterStrategyFactoryInterface;
+use Czim\DataStore\Contracts\Stores\Sorting\SortStrategyFactoryInterface;
 use Czim\DataStore\Stores\DataStoreFactory;
 use Czim\DataStore\Stores\Filtering\FilterStrategyFactory;
+use Czim\DataStore\Stores\Sorting\SortStrategyFactory;
 use Illuminate\Support\ServiceProvider;
 
 class DataStoreServiceProvider extends ServiceProvider
@@ -45,6 +47,7 @@ class DataStoreServiceProvider extends ServiceProvider
 
         $this->app->singleton(DataStoreFactoryInterface::class, DataStoreFactory::class);
         $this->app->singleton(FilterStrategyFactoryInterface::class, FilterStrategyFactory::class);
+        $this->app->singleton(SortStrategyFactoryInterface::class, SortStrategyFactory::class);
         $this->app->singleton(ResourceAdapterFactoryInterface::class, $resourceFactoryClass);
 
         return $this;
