@@ -2,6 +2,8 @@
 namespace Czim\DataStore\Contracts\Stores\Includes;
 
 use Czim\DataStore\Contracts\Resource\ResourceAdapterFactoryInterface;
+use Czim\DataStore\Contracts\Resource\ResourceAdapterInterface;
+use Illuminate\Database\Eloquent\Model;
 
 interface IncludeResolverInterface
 {
@@ -21,5 +23,14 @@ interface IncludeResolverInterface
      * @return $this
      */
     public function setResourceAdapterFactory(ResourceAdapterFactoryInterface $adapterFactory);
+
+    /**
+     * Sets the active model and optionally its resource adapter.
+     *
+     * @param Model                         $model
+     * @param ResourceAdapterInterface|null $adapter
+     * @return $this
+     */
+    public function setModel(Model $model, ResourceAdapterInterface $adapter = null);
 
 }

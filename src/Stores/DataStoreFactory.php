@@ -2,6 +2,7 @@
 namespace Czim\DataStore\Stores;
 
 use Czim\DataStore\Contracts\Resource\ResourceAdapterFactoryInterface;
+use Czim\DataStore\Contracts\Resource\ResourceAdapterInterface;
 use Czim\DataStore\Contracts\Stores\DataStoreFactoryInterface;
 use Czim\DataStore\Contracts\Stores\DataStoreInterface;
 use Czim\DataStore\Contracts\Stores\EloquentModelDataStoreInterface;
@@ -12,7 +13,6 @@ use Czim\DataStore\Contracts\Stores\Includes\IncludeDecoratorInterface;
 use Czim\DataStore\Contracts\Stores\Includes\IncludeResolverInterface;
 use Czim\DataStore\Contracts\Stores\Manipulation\DataManipulatorFactoryInterface;
 use Czim\DataStore\Contracts\Stores\Manipulation\DataManipulatorInterface;
-use Czim\DataStore\Stores\Includes\IncludeResolver;
 use Czim\Repository\Contracts\BaseRepositoryInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
@@ -162,7 +162,7 @@ class DataStoreFactory implements DataStoreFactoryInterface
             ->setResourceAdapter($adapter)
             ->setStrategyDriver($driverString);
 
-        if ($resolver = $this->getIncludeResolverForObject($object)) {
+        if ($resolver = $this->getIncludeResolverForObject($object, $adapter)) {
             $resolver->setResourceAdapterFactory($adapterFactory);
             $store->setIncludeResolver($resolver);
         }
@@ -310,12 +310,20 @@ class DataStoreFactory implements DataStoreFactoryInterface
     }
 
     /**
-     * @param object $object
+     * @param object                        $object
+     * @param ResourceAdapterInterface|null $adapter
      * @return IncludeResolverInterface
      */
-    protected function getIncludeResolverForObject($object)
+    protected function getIncludeResolverForObject($object, ResourceAdapterInterface $adapter = null)
     {
-        return app(IncludeResolver::class);
+        /** @var IncludeResolverInterface $resolver */
+        $resolver = app(IncludeResolverInterface::class);
+
+        $model = $this->resolveObjectToModelInstance($object);
+
+        $resolver->setModel($model, $adapter);
+
+        return $resolver;
     }
 
     /**
