@@ -194,7 +194,7 @@ class DefaultFilter extends Filter implements FilterHandlerInterface
         $modelClass = get_class($this->model);
 
         return config(
-            "datastore.filter.strategies.{$modelClass}",
+            "datastore.filter.strategies.{$modelClass}.{$key}",
             config("datastore.filter.default-strategies.{$key}", $this->determineStrategyDefault($key))
         );
     }
