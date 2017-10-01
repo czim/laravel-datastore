@@ -40,9 +40,16 @@ Czim\DataStore\Providers\DataStoreServiceProvider::class,
 Publish the configuration file.
 
 ``` bash
-php artisan vendor:publish
+$ php artisan vendor:publish
 ```
 
+### Filtering
+
+If you intend to make use of the (default) filtering functionality of this package, you should add the [czim/laravel-filter](https://github.com/czim/laravel-filter) dependency:
+
+```bash
+$ composer require czim/laravel-filter 
+```
 
 ## Documentation
 
