@@ -248,7 +248,7 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
             $size  = $context->pageSize() ?: $this->defaultPageSize;
 
             return new LengthAwarePaginator(
-                $query->take($size)->skip($page - 1 * $size)->get(),
+                $query->take($size)->skip(($page - 1) * $size)->get(),
                 $total,
                 $size,
                 $page
