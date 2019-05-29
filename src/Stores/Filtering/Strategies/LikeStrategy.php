@@ -1,11 +1,10 @@
 <?php
 namespace Czim\DataStore\Stores\Filtering\Strategies;
 
-use Czim\DataStore\Contracts\Stores\Filtering\FilterStrategyInterface;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Query\Builder;
 
-class LikeStrategy implements FilterStrategyInterface
+class LikeStrategy extends AbstractFilterStrategy
 {
 
     /**
@@ -18,7 +17,9 @@ class LikeStrategy implements FilterStrategyInterface
      */
     public function apply($query, $column, $value)
     {
-        return $query->where($column, 'like', '%' . $value . '%');
+        $conditional = $this->isReversed() ? 'not like' : 'like';
+
+        return $query->where($column, $conditional, '%' . $value . '%');
     }
 
 }

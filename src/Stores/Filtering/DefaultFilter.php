@@ -11,6 +11,7 @@ use Exception;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Support\Str;
 use RuntimeException;
 use UnexpectedValueException;
 
@@ -117,8 +118,15 @@ class DefaultFilter extends Filter implements FilterHandlerInterface
     {
         $defaults = [];
 
+        $reversePrefix = $this->reversalPrefix();
+
         foreach ($keys as $key) {
             $defaults[ $key ] = null;
+
+            // Add the reverse-prefixed versions of all keys to the defaults aswell
+            if ($reversePrefix !== null) {
+                $defaults[ $reversePrefix . $key ] = null;
+            }
         }
 
         return $defaults;
@@ -129,10 +137,12 @@ class DefaultFilter extends Filter implements FilterHandlerInterface
      */
     protected function applyParameter($parameterName, $parameterValue, $query)
     {
+        $baseParameterName = $this->stripReversalPrefix($parameterName);
+
         // The parameter may be either a resource attribute or resource include.
         // If the parameter is custom and matches neither type, a custom strategy
         // must be used to handle it correctly.
-        $key = $this->resolveDataKeyForParameterName($parameterName);
+        $key = $this->resolveDataKeyForParameterName($baseParameterName);
 
         // If the parameter is for a relation, there may be nested keys
         // to be filtered on the related items, this is not currently supported.
@@ -142,9 +152,10 @@ class DefaultFilter extends Filter implements FilterHandlerInterface
         if ($key) {
             $this->applyFilterValue(
                 $query,
-                $this->determineStrategyForKey($parameterName),
+                $this->determineStrategyForKey($baseParameterName),
                 $key,
-                $parameterValue
+                $parameterValue,
+                $this->isFilterReversed($parameterName)
             );
             return;
         }
@@ -197,6 +208,15 @@ class DefaultFilter extends Filter implements FilterHandlerInterface
             "datastore.filter.strategies.{$modelClass}.{$key}",
             config("datastore.filter.default-strategies.{$key}", $this->determineStrategyDefault($key))
         );
+    }
+
+    /**
+     * @param string $key
+     * @return bool
+     */
+    protected function isFilterReversed($key)
+    {
+        return $this->reversalPrefix() !== null && Str::startsWith($key, $this->reversalPrefix());
     }
 
     /**
@@ -265,9 +285,10 @@ class DefaultFilter extends Filter implements FilterHandlerInterface
      * @param string  $strategy
      * @param string  $key
      * @param mixed   $value
+     * @param bool    $isReversed
      * @return Builder
      */
-    protected function applyFilterValue($query, $strategy, $key, $value)
+    protected function applyFilterValue($query, $strategy, $key, $value, $isReversed = false)
     {
         if ( ! $this->strategyFactory) {
             throw new RuntimeException(
@@ -275,8 +296,31 @@ class DefaultFilter extends Filter implements FilterHandlerInterface
             );
         }
 
-        return $this->strategyFactory->make($strategy)
+        return $this->strategyFactory->make($strategy, $isReversed)
             ->apply($query, $key, $value);
+    }
+
+    /**
+     * Returns the key without the reversal prefix, if it has any.
+     *
+     * @param string $key
+     * @return bool|string
+     */
+    protected function stripReversalPrefix($key)
+    {
+        if ($this->reversalPrefix() !== null && ! Str::startsWith($key, $this->reversalPrefix())) {
+            return $key;
+        }
+
+        return substr($key, strlen($this->reversalPrefix()));
+    }
+
+    /**
+     * @return null|string
+     */
+    protected function reversalPrefix()
+    {
+        return config('datastore.filter.reverse-key-prefix', null) ?: null;
     }
 
 }

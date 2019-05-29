@@ -1,13 +1,12 @@
 <?php
 namespace Czim\DataStore\Stores\Filtering\Strategies;
 
-use Czim\DataStore\Contracts\Stores\Filtering\FilterStrategyInterface;
 use Illuminate\Contracts\Support\Arrayable;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Database\Query\Builder;
 
-class RelationKeyStrategy implements FilterStrategyInterface
+class RelationKeyStrategy extends AbstractFilterStrategy
 {
 
     /**
@@ -22,15 +21,20 @@ class RelationKeyStrategy implements FilterStrategyInterface
     {
         $key = $this->getModelKeyForRelation($query, $relation);
 
-        return $query->whereHas($relation, function ($query) use ($key, $value) {
-            /** @var Builder $query */
+        return $query->whereHas(
+            $relation,
+            function ($query) use ($key, $value) {
+                /** @var Builder $query */
 
-            if (is_array($value) || $value instanceof Arrayable) {
-                return $query->whereIn($key, $value);
-            }
+                if (is_array($value) || $value instanceof Arrayable) {
+                    return $query->whereIn($key, $value);
+                }
 
-            return $query->where($key, $value);
-        });
+                return $query->where($key, $value);
+            },
+            $this->getWhereHasConditional(),
+            $this->getWhereHasCount()
+        );
     }
 
     /**
@@ -44,6 +48,22 @@ class RelationKeyStrategy implements FilterStrategyInterface
         $instance = $query->getModel()->{$relation}();
 
         return $instance->getModel()->getKeyName();
+    }
+
+    /**
+     * @return string
+     */
+    protected function getWhereHasConditional()
+    {
+        return $this->isReversed() ? '<' : '>=';
+    }
+
+    /**
+     * @return int
+     */
+    protected function getWhereHasCount()
+    {
+        return 1;
     }
 
 }

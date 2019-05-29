@@ -1,12 +1,12 @@
 <?php
 namespace Czim\DataStore\Stores\Filtering\Strategies\Postgres;
 
-use Czim\DataStore\Contracts\Stores\Filtering\FilterStrategyInterface;
+use Czim\DataStore\Stores\Filtering\Strategies\AbstractFilterStrategy;
 use DB;
 use Illuminate\Database\Eloquent\Builder as EloquentBuilder;
 use Illuminate\Database\Query\Builder;
 
-class LikeCaseInsensitiveStrategy implements FilterStrategyInterface
+class LikeCaseInsensitiveStrategy extends AbstractFilterStrategy
 {
 
     /**
@@ -19,7 +19,9 @@ class LikeCaseInsensitiveStrategy implements FilterStrategyInterface
      */
     public function apply($query, $column, $value)
     {
-        return $query->where(DB::raw('lower(' . $column . ')'), 'like', '%' . strtolower($value) . '%');
+        $conditional = $this->isReversed() ? 'not like' : 'like';
+
+        return $query->where(DB::raw('lower(' . $column . ')'), $conditional, '%' . strtolower($value) . '%');
     }
 
 }

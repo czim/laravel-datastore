@@ -17,4 +17,10 @@ interface FilterStrategyInterface
      */
     public function apply($query, $column, $value);
 
+    /**
+     * Marks the filter strategy as being reversed (exclusive).
+     */
+    public function setReversed();
+
+
 }

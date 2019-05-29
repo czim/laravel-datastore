@@ -162,6 +162,11 @@ return [
         ],
 
 
+        // If this prefix is detected before a filter property key,
+        // and the interpretation of the key permits it, the filter is reversed
+        // (ie. from inclusive to exclusive).
+        'reverse-key-prefix' => '-',
+
         // The default / fallback strategy
         'default' => FilterStrategyEnum::LIKE_CASE_INSENSITIVE,
 

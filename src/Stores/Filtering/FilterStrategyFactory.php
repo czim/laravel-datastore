@@ -28,11 +28,17 @@ class FilterStrategyFactory implements FilterStrategyFactoryInterface
      * Makes a filter strategy instance.
      *
      * @param string $strategy
+     * @param bool   $isReversed
      * @return FilterStrategyInterface
      */
-    public function make($strategy)
+    public function make($strategy, $isReversed = false)
     {
+        /** @var FilterStrategyInterface $instance */
         $instance = app($this->getClassForStrategy($strategy));
+
+        if ($isReversed) {
+            $instance->setReversed();
+        }
 
         $this->clearDriver();
 

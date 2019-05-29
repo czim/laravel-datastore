@@ -16,8 +16,9 @@ interface FilterStrategyFactoryInterface
      * Makes a filter strategy instance.
      *
      * @param string $strategy
+     * @param bool   $isReversed
      * @return FilterStrategyInterface
      */
-    public function make($strategy);
+    public function make($strategy, $isReversed = false);
 
 }
