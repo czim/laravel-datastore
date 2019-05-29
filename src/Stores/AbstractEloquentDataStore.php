@@ -18,6 +18,7 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Query\Builder;
 use Illuminate\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Collection;
+use Illuminate\Support\Str;
 use InvalidArgumentException;
 use RuntimeException;
 
@@ -280,7 +281,7 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
         $available = $this->resourceAdapter->availableFilterKeys();
 
         $filters = array_filter($filters, function ($key) use ($available) {
-            return in_array($key, $available);
+            return $this->isPartOfAvailableFilters($key, $available);
         }, ARRAY_FILTER_USE_KEY);
 
 
@@ -295,6 +296,18 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
         return $this->filter
             ->setData($filters, $available)
             ->apply($query);
+    }
+
+    /**
+     * Returns whether the given key is (prefixed or not) part of the available filters.
+     *
+     * @param string   $key
+     * @param string[] $available
+     * @return bool
+     */
+    protected function isPartOfAvailableFilters($key, array $available)
+    {
+        return in_array($this->stripReversalPrefix($key), $available);
     }
 
     /**
@@ -601,6 +614,30 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
         }
 
         return $resolvedData;
+    }
+
+
+    /**
+     * Returns the key without the reversal prefix, if it has any.
+     *
+     * @param string $key
+     * @return bool|string
+     */
+    protected function stripReversalPrefix($key)
+    {
+        if ($this->reversalPrefix() !== null && ! Str::startsWith($key, $this->reversalPrefix())) {
+            return $key;
+        }
+
+        return substr($key, strlen($this->reversalPrefix()));
+    }
+
+    /**
+     * @return null|string
+     */
+    protected function reversalPrefix()
+    {
+        return config('datastore.filter.reverse-key-prefix', null) ?: null;
     }
 
 
