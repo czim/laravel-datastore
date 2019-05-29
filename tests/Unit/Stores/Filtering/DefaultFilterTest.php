@@ -231,7 +231,7 @@ class DefaultFilterTest extends TestCase
     /**
      * @test
      */
-    function it_applies_a_strategy_for_a_filtered_include_parameter_falling_back_to_deafult()
+    function it_applies_a_strategy_for_a_filtered_include_parameter_falling_back_to_default()
     {
         $this->app['config']->set('datastore.filter.default', 'relation-filter-hasmany');
 
