@@ -86,4 +86,25 @@ class FilterStrategyFactoryTest extends TestCase
         static::assertSame($instance, $factory->make('test'));
     }
 
+    /**
+     * @test
+     */
+    function it_applies_reverse_to_instance_when_given_as_parameter()
+    {
+        app('config')->set('datastore.filter.default', 'test');
+        app('config')->set('datastore.filter.class-map.mysql', [
+            'test' => static::class,
+        ]);
+
+        $factory = new FilterStrategyFactory;
+
+        $instance = Mockery::mock(FilterStrategyInterface::class);
+
+        $instance->shouldReceive('setReversed')->atLeast()->once();
+
+        app()->instance(static::class, $instance);
+
+        static::assertSame($instance, $factory->make(null, true));
+    }
+
 }

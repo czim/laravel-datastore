@@ -97,6 +97,7 @@ class DefaultFilterTest extends TestCase
     function it_applies_a_strategy_for_a_filtered_attribute_parameter()
     {
         $filter = new DefaultFilter;
+        $filter->setModel(new TestModel);
         $filter->setFilterData(new DefaultFilterData(['some' => 'value'], ['some' => null]));
 
         $adapter = $this->getMockAdapter();
@@ -116,7 +117,7 @@ class DefaultFilterTest extends TestCase
             });
 
         $factory = $this->getMockStrategyFactory();
-        $factory->shouldReceive('make')->once()->with('like')->andReturn($strategy);
+        $factory->shouldReceive('make')->once()->with('like', false)->andReturn($strategy);
         $filter->setStrategyFactory($factory);
 
         static::assertSame($query, $filter->apply($query));
@@ -129,6 +130,7 @@ class DefaultFilterTest extends TestCase
     {
         $filter = new DefaultFilter;
         $filter->setFilterData(new DefaultFilterData(['some' => 'value'], ['some' => null]));
+        $filter->setModel(new TestModel);
 
         $query = $this->getMockQueryBuilder();
 
@@ -142,7 +144,7 @@ class DefaultFilterTest extends TestCase
             });
 
         $factory = $this->getMockStrategyFactory();
-        $factory->shouldReceive('make')->once()->with('like')->andReturn($strategy);
+        $factory->shouldReceive('make')->once()->with('like', false)->andReturn($strategy);
         $filter->setStrategyFactory($factory);
 
 
@@ -158,6 +160,7 @@ class DefaultFilterTest extends TestCase
     {
         $filter = new DefaultFilter;
         $filter->setFilterData(new DefaultFilterData(['some' => 'value'], ['some' => null]));
+        $filter->setModel(new TestModel);
 
         $adapter = $this->getMockAdapter();
         $adapter->shouldReceive('availableIncludeKeys')->atLeast()->once()->andReturn(['something_else']);
@@ -188,6 +191,39 @@ class DefaultFilterTest extends TestCase
         $filter->apply($query);
     }
 
+    /**
+     * @test
+     */
+    function it_applies_a_strategy_as_reversed_when_the_key_is_prefixed_as_configured()
+    {
+        $this->app['config']->set('datastore.filter.reverse-key-prefix', '-');
+
+        $filter = new DefaultFilter;
+        $filter->setModel(new TestModel);
+        $filter->setFilterData(new DefaultFilterData(['-some' => 'value'], ['-some' => null]));
+
+        $adapter = $this->getMockAdapter();
+        $adapter->shouldReceive('availableIncludeKeys')->atleast()->once()->andReturn(['something_else']);
+        $adapter->shouldReceive('dataKeyForAttribute')->once()->with('some')->andReturn('some_resolved');
+        $filter->setResourceAdapter($adapter);
+
+        $query = $this->getMockQueryBuilder();
+
+        $strategy = $this->getMockStrategy();
+        $strategy->shouldReceive('apply')
+            ->once()
+            ->with($query, 'some_resolved', 'value')
+            ->andReturnUsing(function ($query) {
+                /** @var Builder $query */
+                return $query;
+            });
+
+        $factory = $this->getMockStrategyFactory();
+        $factory->shouldReceive('make')->once()->with('like', true)->andReturn($strategy);
+        $filter->setStrategyFactory($factory);
+
+        static::assertSame($query, $filter->apply($query));
+    }
 
     // ------------------------------------------------------------------------------
     //      Include filtering
@@ -222,7 +258,7 @@ class DefaultFilterTest extends TestCase
         $this->app->instance('relation-filter-hasmany', $strategy);
 
         $factory = $this->getMockStrategyFactory();
-        $factory->shouldReceive('make')->once()->with('relation-filter-hasmany')->andReturn($strategy);
+        $factory->shouldReceive('make')->once()->with('relation-filter-hasmany', false)->andReturn($strategy);
         $filter->setStrategyFactory($factory);
 
         static::assertSame($query, $filter->apply($query));
@@ -257,7 +293,7 @@ class DefaultFilterTest extends TestCase
         $this->app->instance('relation-filter-hasmany', $strategy);
 
         $factory = $this->getMockStrategyFactory();
-        $factory->shouldReceive('make')->once()->with('relation-filter-hasmany')->andReturn($strategy);
+        $factory->shouldReceive('make')->once()->with('relation-filter-hasmany', false)->andReturn($strategy);
         $filter->setStrategyFactory($factory);
 
         static::assertSame($query, $filter->apply($query));
