@@ -16,6 +16,7 @@ use Czim\DataStore\Contracts\Stores\Manipulation\DataManipulatorInterface;
 use Czim\Repository\Contracts\BaseRepositoryInterface;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Support\Arr;
 use RuntimeException;
 use UnexpectedValueException;
 
@@ -184,7 +185,7 @@ class DataStoreFactory implements DataStoreFactoryInterface
             $store->setManipulator($manipulator);
         }
 
-        if ($pageSize = array_get($this->config, 'pagination.size')) {
+        if ($pageSize = Arr::get($this->config, 'pagination.size')) {
             $store->setDefaultPageSize($pageSize);
         }
     }
