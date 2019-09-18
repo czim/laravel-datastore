@@ -6,6 +6,7 @@ use Czim\DataStore\Contracts\Resource\ResourceAdapterInterface;
 use Czim\DataStore\Contracts\Stores\Includes\IncludeResolverInterface;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Support\Arr;
 use RuntimeException;
 
 class IncludeResolver implements IncludeResolverInterface
@@ -75,7 +76,7 @@ class IncludeResolver implements IncludeResolverInterface
 
         $resolvedTree = $this->recursivelyResolveEagerLoadingIncludes($this->model, $this->adapter, $includesTree);
 
-        return array_keys(array_dot($resolvedTree));
+        return array_keys(Arr::dot($resolvedTree));
     }
 
     /**
@@ -172,7 +173,7 @@ class IncludeResolver implements IncludeResolverInterface
         $exploded = [];
 
         foreach ($includes as $key) {
-            array_set($exploded, $key, []);
+            Arr::set($exploded, $key, []);
         }
 
         return $exploded;

@@ -3,6 +3,7 @@ namespace Czim\DataStore\Context;
 
 use Czim\DataObject\AbstractDataObject;
 use Czim\DataStore\Contracts\Context\ContextInterface;
+use Illuminate\Support\Arr;
 
 /**
  * Class RequestContext
@@ -38,7 +39,7 @@ class RequestContext extends AbstractDataObject implements ContextInterface
      */
     public function filter($key)
     {
-        return array_get($this->filters(), $key);
+        return Arr::get($this->filters(), $key);
     }
 
     /**

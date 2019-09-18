@@ -16,6 +16,7 @@ use Illuminate\Database\Eloquent\Relations\MorphOne;
 use Illuminate\Database\Eloquent\Relations\MorphTo;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
 use Illuminate\Database\Eloquent\Relations\Relation;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Collection;
 use InvalidArgumentException;
 use RuntimeException;
@@ -670,7 +671,7 @@ class EloquentModelManipulator implements DataManipulatorInterface
     protected function getSingleRecordFromArrayableArgument($records)
     {
         if (is_array($records)) {
-            return array_first($records);
+            return Arr::first($records);
         }
 
         if ($records instanceof Collection) {
@@ -739,7 +740,7 @@ class EloquentModelManipulator implements DataManipulatorInterface
      */
     protected function isAllowedToReplaceManyForRelation($relation)
     {
-        if (null !== ($allowed = array_get($this->config, "allow-relationship-replace.{$relation}"))) {
+        if (null !== ($allowed = Arr::get($this->config, "allow-relationship-replace.{$relation}"))) {
             return (bool) $allowed;
         }
 
@@ -754,7 +755,7 @@ class EloquentModelManipulator implements DataManipulatorInterface
      */
     protected function shouldDeleteOnDetach($relation)
     {
-        return (bool) array_get($this->config, "delete-detached.{$relation}");
+        return (bool) Arr::get($this->config, "delete-detached.{$relation}");
     }
 
 }
