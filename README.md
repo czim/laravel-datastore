@@ -19,8 +19,8 @@ Currently a WIP under heavy development.
 
  Laravel      | Package 
 :-------------|:--------
- 5.3.x        | ?
- 5.4.x        | ?
+ 5.4 - 5.8    | 1.1
+ 6.0          | 2.0
 
 
 ## Installation
