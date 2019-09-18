@@ -1,6 +1,7 @@
 <?php
 namespace Czim\DataStore\Test\Integration\Stores\Manipulation;
 
+use Czim\DataStore\Exceptions\RelationReplaceDisallowedException;
 use Czim\DataStore\Stores\Manipulation\EloquentModelManipulator;
 use Czim\DataStore\Test\Helpers\Models\TestAuthor;
 use Czim\DataStore\Test\Helpers\Models\TestComment;
@@ -16,7 +17,7 @@ class EloquentModelManipulatorAttachTest extends RelationsProvisionedTestCase
     /**
      * {@inheritdoc}
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -497,14 +498,6 @@ class EloquentModelManipulatorAttachTest extends RelationsProvisionedTestCase
         static::assertNull(TestAuthor::find(2), "Previously related was not deleted");
     }
 
-    /**
-     * @test
-     */
-    function it_attaches_belongs_to_many_models_with_pivot_data()
-    {
-
-    }
-
     // Morph To Many
 
     /**
@@ -576,10 +569,11 @@ class EloquentModelManipulatorAttachTest extends RelationsProvisionedTestCase
 
     /**
      * @test
-     * @expectedException \InvalidArgumentException
      */
     function it_throws_an_exception_if_singular_update_records_value_is_incorrect()
     {
+        $this->expectException(\InvalidArgumentException::class);
+
         /** @var TestPost $post */
         $post = TestPost::first();
 
@@ -613,17 +607,10 @@ class EloquentModelManipulatorAttachTest extends RelationsProvisionedTestCase
     /**
      * @test
      */
-    function it_does_not_change_anything_reattaching_the_same_plural_models()
-    {
-
-    }
-
-    /**
-     * @test
-     * @expectedException \Czim\DataStore\Exceptions\RelationReplaceDisallowedException
-     */
     function it_throws_an_exception_if_not_allowed_to_replace_existing_plural_data()
     {
+        $this->expectException(RelationReplaceDisallowedException::class);
+
         /** @var TestPost $post */
         $post = TestPost::first();
 
@@ -635,10 +622,11 @@ class EloquentModelManipulatorAttachTest extends RelationsProvisionedTestCase
 
     /**
      * @test
-     * @expectedException \InvalidArgumentException
      */
     function it_throws_an_exception_when_a_parent_argument_is_invalid()
     {
+        $this->expectException(\InvalidArgumentException::class);
+
         /** @var TestPost $post */
         $post = TestPost::first();
 
@@ -650,10 +638,11 @@ class EloquentModelManipulatorAttachTest extends RelationsProvisionedTestCase
 
     /**
      * @test
-     * @expectedException \InvalidArgumentException
      */
     function it_throws_an_exception_when_a_parent_argument_is_checked_without_a_reference_model_set()
     {
+        $this->expectException(\InvalidArgumentException::class);
+
         /** @var TestPost $post */
         $post = TestPost::first();
 
@@ -664,10 +653,11 @@ class EloquentModelManipulatorAttachTest extends RelationsProvisionedTestCase
 
     /**
      * @test
-     * @expectedException \InvalidArgumentException
      */
     function it_throws_an_exception_when_a_records_argument_is_not_a_collection_or_array()
     {
+        $this->expectException(\InvalidArgumentException::class);
+
         /** @var TestPost $post */
         $post = TestPost::first();
 
@@ -676,13 +666,14 @@ class EloquentModelManipulatorAttachTest extends RelationsProvisionedTestCase
 
         $manipulator->attachRelatedRecords($post, 'genre', 'not an array');
     }
-    
+
     /**
      * @test
-     * @expectedException \InvalidArgumentException
      */
     function it_throws_an_exception_if_a_relation_method_name_is_not_for_an_eloquent_relation()
     {
+        $this->expectException(\InvalidArgumentException::class);
+
         /** @var TestPost $post */
         $post = TestPost::first();
 
@@ -694,10 +685,11 @@ class EloquentModelManipulatorAttachTest extends RelationsProvisionedTestCase
 
     /**
      * @test
-     * @expectedException \RuntimeException
      */
     function it_throws_an_exception_when_an_unsupported_relationship_type_is_attached()
     {
+        $this->expectException(\RuntimeException::class);
+
         /** @var TestPost $post */
         $post = TestPost::first();
 

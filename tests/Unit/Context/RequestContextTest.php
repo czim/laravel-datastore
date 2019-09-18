@@ -112,7 +112,7 @@ class RequestContextTest extends TestCase
 
         $sorting = $context->sorting();
 
-        static::assertInternalType('array', $sorting);
+        static::assertIsArray($sorting);
         static::assertCount(2, $sorting);
         static::assertInstanceOf(SortKey::class, $sorting[0]);
         static::assertEquals('test', $sorting[0]->getKey());
@@ -136,7 +136,7 @@ class RequestContextTest extends TestCase
 
         $sorting = $context->sorting();
 
-        static::assertInternalType('array', $sorting);
+        static::assertIsArray($sorting);
         static::assertCount(1, $sorting);
         static::assertInstanceOf(SortKey::class, $sorting[0]);
         static::assertEquals('test', $sorting[0]->getKey());

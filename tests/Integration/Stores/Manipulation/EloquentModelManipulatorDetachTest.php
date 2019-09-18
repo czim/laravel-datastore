@@ -15,7 +15,7 @@ class EloquentModelManipulatorDetachTest extends RelationsProvisionedTestCase
     /**
      * {@inheritdoc}
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -498,10 +498,11 @@ class EloquentModelManipulatorDetachTest extends RelationsProvisionedTestCase
 
     /**
      * @test
-     * @expectedException \RuntimeException
      */
     function it_throws_an_exception_when_an_unsupported_relationship_type_is_detached()
     {
+        $this->expectException(\RuntimeException::class);
+
         /** @var TestPost $post */
         $post = TestPost::first();
 

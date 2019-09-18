@@ -5,6 +5,7 @@ use Czim\DataStore\Stores\Manipulation\EloquentModelManipulator;
 use Czim\DataStore\Test\Helpers\Data\TestData;
 use Czim\DataStore\Test\Helpers\Models\TestModel;
 use Czim\DataStore\Test\ProvisionedTestCase;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class EloquentModelManipulatorTest extends ProvisionedTestCase
 {
@@ -94,11 +95,12 @@ class EloquentModelManipulatorTest extends ProvisionedTestCase
 
     /**
      * @test
-     * @expectedException \Illuminate\Database\Eloquent\ModelNotFoundException
      * @depends it_takes_the_model_as_an_instance
      */
     function it_throws_an_exception_if_it_cannot_find_a_model_to_update()
     {
+        $this->expectException(ModelNotFoundException::class);
+
         $manipulator = new EloquentModelManipulator;
         $manipulator->setModel(new TestModel);
 
@@ -106,7 +108,7 @@ class EloquentModelManipulatorTest extends ProvisionedTestCase
 
         static::assertTrue($manipulator->updateById(999, $data));
     }
-    
+
     /**
      * @test
      */

@@ -60,10 +60,11 @@ class JsonApiResourceAdapterFactoryTest extends TestCase
 
     /**
      * @test
-     * @expectedException \UnexpectedValueException
      */
     function it_throws_an_exception_if_the_resource_repository_returns_an_unexpected_instance()
     {
+        $this->expectException(\UnexpectedValueException::class);
+
         $repository = $this->getMockResourceRepository();
         $repository->shouldReceive('getByModel')
             ->with(Mockery::type(Model::class))->once()

@@ -70,10 +70,11 @@ class EloquentRepositoryManipulatorFactoryTest extends TestCase
 
     /**
      * @test
-     * @expectedException \RuntimeException
      */
     function it_throws_and_exception_when_attempting_to_create_for_model()
     {
+        $this->expectException(\RuntimeException::class);
+
         $factory = new EloquentRepositoryManipulatorFactory;
 
         /** @var Mockery\Mock|Mockery\MockInterface|Model $model */

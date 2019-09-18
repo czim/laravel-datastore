@@ -17,7 +17,7 @@ class IncludeResolverTest extends ProvisionedTestCase
     /**
      * {@inheritdoc}
      */
-    public function setUp()
+    public function setUp(): void
     {
         parent::setUp();
 
@@ -102,10 +102,11 @@ class IncludeResolverTest extends ProvisionedTestCase
 
     /**
      * @test
-     * @expectedException \RuntimeException
      */
     function it_throws_an_exception_for_includes_mapped_to_relations_of_parents_that_are_not_eloquent_relations()
     {
+        $this->expectException(\RuntimeException::class);
+
         $resolver = new IncludeResolver;
 
         $model = $this->createRelatedTestModel();
@@ -123,10 +124,11 @@ class IncludeResolverTest extends ProvisionedTestCase
 
     /**
      * @test
-     * @expectedException \RuntimeException
      */
     function it_rethrows_an_exception_that_was_thrown_for_includes_mapped_to_relations_of_parents_that_throw_exceptions()
     {
+        $this->expectException(\RuntimeException::class);
+
         $resolver = new IncludeResolver;
 
         $model = $this->createRelatedTestModel();

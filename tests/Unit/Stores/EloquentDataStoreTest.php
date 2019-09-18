@@ -13,6 +13,7 @@ use Czim\DataStore\Contracts\Stores\Includes\IncludeResolverInterface;
 use Czim\DataStore\Contracts\Stores\Manipulation\DataManipulatorInterface;
 use Czim\DataStore\Contracts\Stores\Sorting\SortStrategyFactoryInterface;
 use Czim\DataStore\Contracts\Stores\Sorting\SortStrategyInterface;
+use Czim\DataStore\Exceptions\FeatureNotSupportedException;
 use Czim\DataStore\Stores\EloquentDataStore;
 use Czim\DataStore\Test\Helpers\Data\TestData;
 use Czim\DataStore\Test\Helpers\Models\TestModel;
@@ -102,7 +103,7 @@ class EloquentDataStoreTest extends ProvisionedTestCase
 
         static::assertSame($model, $store->getModel());
     }
-    
+
     /**
      * @test
      */
@@ -335,10 +336,11 @@ class EloquentDataStoreTest extends ProvisionedTestCase
 
     /**
      * @test
-     * @expectedException \InvalidArgumentException
      */
     function it_throws_an_exception_for_detach_by_id_if_include_could_not_be_resolved()
     {
+        $this->expectException(\InvalidArgumentException::class);
+
         $parent = new TestPost;
 
         $store = new EloquentDataStore;
@@ -457,10 +459,11 @@ class EloquentDataStoreTest extends ProvisionedTestCase
 
     /**
      * @test
-     * @expectedException \Czim\DataStore\Exceptions\FeatureNotSupportedException
      */
     function it_throws_an_exception_for_create_if_no_manipulator_is_set()
     {
+        $this->expectException(FeatureNotSupportedException::class);
+
         $store = new EloquentDataStore;
 
         $store->create(new TestData(['test' => true]));
@@ -492,10 +495,11 @@ class EloquentDataStoreTest extends ProvisionedTestCase
 
     /**
      * @test
-     * @expectedException \Czim\DataStore\Exceptions\FeatureNotSupportedException
      */
     function it_throws_an_exception_for_make_if_no_manipulator_is_set()
     {
+        $this->expectException(FeatureNotSupportedException::class);
+
         $store = new EloquentDataStore;
 
         $store->make(new TestData(['test' => true]));
@@ -526,10 +530,11 @@ class EloquentDataStoreTest extends ProvisionedTestCase
 
     /**
      * @test
-     * @expectedException \Czim\DataStore\Exceptions\FeatureNotSupportedException
      */
     function it_throws_an_exception_for_update_if_no_manipulator_is_set()
     {
+        $this->expectException(FeatureNotSupportedException::class);
+
         $store = new EloquentDataStore;
 
         $store->updateById(1, new TestData(['test' => true]));
@@ -552,10 +557,11 @@ class EloquentDataStoreTest extends ProvisionedTestCase
 
     /**
      * @test
-     * @expectedException \Czim\DataStore\Exceptions\FeatureNotSupportedException
      */
     function it_throws_an_exception_for_delete_if_no_manipulator_is_set()
     {
+        $this->expectException(FeatureNotSupportedException::class);
+
         $store = new EloquentDataStore;
 
         $store->deleteById(1);
@@ -586,10 +592,11 @@ class EloquentDataStoreTest extends ProvisionedTestCase
 
     /**
      * @test
-     * @expectedException \InvalidArgumentException
      */
     function it_throws_an_exception_for_attach_if_include_could_not_be_resolved()
     {
+        $this->expectException(\InvalidArgumentException::class);
+
         $parent = new TestPost;
 
         $store = new EloquentDataStore;
@@ -631,10 +638,11 @@ class EloquentDataStoreTest extends ProvisionedTestCase
 
     /**
      * @test
-     * @expectedException \InvalidArgumentException
      */
     function it_throws_an_exception_for_detach_if_include_could_not_be_resolved()
     {
+        $this->expectException(\InvalidArgumentException::class);
+
         $parent = new TestPost;
 
         $store = new EloquentDataStore;

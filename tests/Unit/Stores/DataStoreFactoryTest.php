@@ -313,10 +313,11 @@ class DataStoreFactoryTest extends ProvisionedTestCase
 
     /**
      * @test
-     * @expectedException \RuntimeException
      */
     function it_throws_an_exception_if_a_mapped_model_store_does_not_implement_required_interface()
     {
+        $this->expectException(\RuntimeException::class);
+
         $factory = new DataStoreFactory;
 
         $model = $this->getMockModel();
@@ -333,10 +334,11 @@ class DataStoreFactoryTest extends ProvisionedTestCase
 
     /**
      * @test
-     * @expectedException \RuntimeException
      */
     function it_throws_an_exception_if_a_mapped_repository_store_does_not_implement_required_interface()
     {
+        $this->expectException(\RuntimeException::class);
+
         $factory = new DataStoreFactory;
 
         $repository = $this->getMockRepository();
@@ -467,10 +469,11 @@ class DataStoreFactoryTest extends ProvisionedTestCase
 
     /**
      * @test
-     * @expectedException \UnexpectedValueException
      */
     function it_throws_an_exception_for_an_unsupported_object()
     {
+        $this->expectException(\UnexpectedValueException::class);
+
         $factory = new DataStoreFactory;
 
         $factory->makeForObject($this);

@@ -8,6 +8,7 @@ use Czim\DataStore\Stores\Filtering\Data\DefaultFilterData;
 use Czim\DataStore\Stores\Filtering\DefaultFilter;
 use Czim\DataStore\Test\Helpers\Models\TestModel;
 use Czim\DataStore\Test\TestCase;
+use Czim\Filter\Exceptions\FilterParameterUnhandledException;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Mockery;
@@ -90,7 +91,7 @@ class DefaultFilterTest extends TestCase
         static::assertEquals(['some' => 'value', 'keys' => null], $data->getAttributes());
         static::assertEquals(['some' => null, 'keys' => null], $data->getDefaults());
     }
-    
+
     /**
      * @test
      */
@@ -154,10 +155,11 @@ class DefaultFilterTest extends TestCase
 
     /**
      * @test
-     * @expectedException \RuntimeException
      */
     function it_throws_an_exception_when_attempting_to_apply_a_strategy_without_a_factory_set()
     {
+        $this->expectException(\RuntimeException::class);
+
         $filter = new DefaultFilter;
         $filter->setFilterData(new DefaultFilterData(['some' => 'value'], ['some' => null]));
         $filter->setModel(new TestModel);
@@ -174,10 +176,11 @@ class DefaultFilterTest extends TestCase
 
     /**
      * @test
-     * @expectedException \Czim\Filter\Exceptions\FilterParameterUnhandledException
      */
     function it_falls_back_to_default_filter_behavior_if_no_key_could_be_resolved_for_a_parameter()
     {
+        $this->expectException(FilterParameterUnhandledException::class);
+
         $filter = new DefaultFilter;
         $filter->setFilterData(new DefaultFilterData(['some' => 'value'], ['some' => null]));
 
@@ -301,10 +304,11 @@ class DefaultFilterTest extends TestCase
 
     /**
      * @test
-     * @expectedException \UnexpectedValueException
      */
     function it_throws_an_exception_applying_a_filtered_include_parameter_that_has_no_matching_relation_method()
     {
+        $this->expectException(\UnexpectedValueException::class);
+
         $filter = new DefaultFilter;
         $filter->setFilterData(new DefaultFilterData(['some' => 'value'], ['some' => null]));
         $filter->setModel(new TestModel);
@@ -321,10 +325,11 @@ class DefaultFilterTest extends TestCase
 
     /**
      * @test
-     * @expectedException \UnexpectedValueException
      */
     function it_throws_an_exception_applying_a_filtered_include_parameter_that_has_a_non_relation_method()
     {
+        $this->expectException(\UnexpectedValueException::class);
+
         $filter = new DefaultFilter;
         $filter->setFilterData(new DefaultFilterData(['some' => 'value'], ['some' => null]));
         $filter->setModel(new TestModel);
