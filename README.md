@@ -21,6 +21,7 @@ Currently a WIP under heavy development.
 :-------------|:--------
  5.4 - 5.8    | 1.1
  6.0          | 2.0
+ 7.0          | 2.1
 
 
 ## Installation
