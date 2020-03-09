@@ -19,13 +19,6 @@ class EloquentDataStore extends AbstractEloquentDataStore implements EloquentMod
      */
     protected $resourceAdapter;
 
-    /**
-     * Strategies to use for JSON-API sort names.
-     *
-     * @var string[]
-     */
-    protected $sortStrategies = [];
-
 
     /**
      * Sets the model to use for accessing data.

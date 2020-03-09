@@ -22,13 +22,6 @@ class EloquentRepositoryDataStore extends AbstractEloquentDataStore implements E
      */
     protected $resourceAdapter;
 
-    /**
-     * Strategies to use for JSON-API sort names (without '-' prefix).
-     *
-     * @var string[]
-     */
-    protected $sortStrategies = [];
-
 
     /**
      * Sets the repository to use for accessing data.

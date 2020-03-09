@@ -54,11 +54,6 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
     protected $manipulator;
 
     /**
-     * @var string
-     */
-    protected $modelClass;
-
-    /**
      * Database strategy driver key.
      *
      * @var string
@@ -383,7 +378,7 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
     protected function determineSortStrategyForAttribute($attribute)
     {
         return config(
-            "datastore.sort.strategies.{$this->modelClass}",
+            "datastore.sort.strategies.{$this->getModelClass()}",
             config(
                 "datastore.sort.default-strategies.{$attribute}",
                 config('datastore.sort.default', SortStrategyEnum::ALPHABETIC)
@@ -640,6 +635,14 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
         return config('datastore.filter.reverse-key-prefix', null) ?: null;
     }
 
+
+    /**
+     * @return string|null
+     */
+    protected function getModelClass()
+    {
+        return get_class($this->getModel());
+    }
 
     // ------------------------------------------------------------------------------
     //      Abstract
