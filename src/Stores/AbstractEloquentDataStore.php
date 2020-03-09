@@ -378,7 +378,7 @@ abstract class AbstractEloquentDataStore implements DataStoreInterface
     protected function determineSortStrategyForAttribute($attribute)
     {
         return config(
-            "datastore.sort.strategies.{$this->getModelClass()}",
+            "datastore.sort.strategies.{$this->getModelClass()}.{$attribute}",
             config(
                 "datastore.sort.default-strategies.{$attribute}",
                 config('datastore.sort.default', SortStrategyEnum::ALPHABETIC)
