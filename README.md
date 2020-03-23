@@ -8,7 +8,7 @@
 Basic datastore framework for building APIs.
 
 This is intended to be combined with a (JSON-API) transformer/serialization layer.
- 
+
 This approach will allow you to separate responsibilities between serialization and transformation (the API representation layer) and data access abstraction.
 
 ## Disclaimer
@@ -17,10 +17,10 @@ Currently a WIP under heavy development.
 
 ## Version Compatibility
 
- Laravel      | Package 
+ Laravel      | Package
 :-------------|:--------
  5.4 - 5.8    | 1.1
- 6.0          | 2.0
+ 6.0          | 2.0+
  7.0          | 2.1
 
 
@@ -49,7 +49,7 @@ $ php artisan vendor:publish
 If you intend to make use of the (default) filtering functionality of this package, you should add the [czim/laravel-filter](https://github.com/czim/laravel-filter) dependency:
 
 ```bash
-$ composer require czim/laravel-filter 
+$ composer require czim/laravel-filter
 ```
 
 ## Documentation
@@ -64,10 +64,10 @@ The resource adapter is an interface layer between the data store and the incomi
 
 Available data stores:
 
-- `\Czim\DataStore\Stores\EloquentDataStore`  
+- `\Czim\DataStore\Stores\EloquentDataStore`
     Simple Model data store.
 
-- `\Czim\DataStore\Stores\EloquentDataStore`  
+- `\Czim\DataStore\Stores\EloquentDataStore`
     Store to use if you have a repository (`Czim\Repository\Contracts\BaseRepositoryInterface`) available.
 
 ### Resource Adapter
@@ -82,15 +82,15 @@ The context for retrieving information (filters, sorting, pagination) is defined
 
 ### Includes
 
-By default, the resource (adapter) and client input determine the includes that will be used for eager loading. Eager loading is then performed on the basis of simple string relation names as `with()` parameters. 
+By default, the resource (adapter) and client input determine the includes that will be used for eager loading. Eager loading is then performed on the basis of simple string relation names as `with()` parameters.
 
-For more flexibility, it is possible to configure include decorators to further control eager loading. 
+For more flexibility, it is possible to configure include decorators to further control eager loading.
 To make use of this:
- 
+
  1. Write an implementation of `Czim\DataStore\Contracts\Stores\Includes\IncludeDecoratorInterface`.
  2. Configure this class in the `datastore.php` configuration file:
      - Either as the default include decorator, in `datastore.include.decorator.default`,
-     - or mapped for a specific class under `datastore.include.decorator.model-map.<your model class>`.   
+     - or mapped for a specific class under `datastore.include.decorator.model-map.<your model class>`.
 
 The `decorate()` method on the decorator will be fed a resolved array of dot-notated include strings, that can be manipulated and returned as desired.
 
@@ -103,9 +103,9 @@ class CustomIncludeDecorator implements IncludeDecoratorInterface
 {
     public function setModel(Model $model)
     {
-        // Ignore or store and use the model as desired. 
+        // Ignore or store and use the model as desired.
     }
-    
+
     public function decorate(array $includes, $many = false)
     {
         // Replace a specific include with a closure to eager load with specific columns.
@@ -115,13 +115,13 @@ class CustomIncludeDecorator implements IncludeDecoratorInterface
                 return $query->select(['id', 'title']);
             };
         }
-        
+
         // Never eager load a specific relation.
         $includes = array_diff($includes, ['neverEagerLoadThis.relation']);
-        
+
         // Always eager load some specific relation.
         $includes[] = 'translations';
-    
+
         return $includes;
     }
 }
