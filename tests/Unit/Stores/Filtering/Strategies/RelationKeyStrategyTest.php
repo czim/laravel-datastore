@@ -7,7 +7,6 @@ use Czim\DataStore\Test\TestCase;
 
 class RelationKeyStrategyTest extends TestCase
 {
-
     /**
      * @test
      */
@@ -22,7 +21,13 @@ class RelationKeyStrategyTest extends TestCase
         $sql      = $query->toSql();
         $bindings = $query->getBindings();
 
-        static::assertRegExp('#\(select \* from [`\'"]test_related_models[`\'"] where [`\'"]test_models[`\'"].[`\'"]id[`\'"] = [`\'"]test_related_models[`\'"].[`\'"]test_model_id[`\'"] and [`\'"]id[`\'"] = \?\)#', $sql, 'Query does not match');
+        static::assertRegExp(
+            '#\(select \* from [`\'"]test_related_models[`\'"] '
+            . 'where [`\'"]test_models[`\'"]\.[`\'"]id[`\'"] = [`\'"]test_related_models[`\'"]\.[`\'"]test_model_id[`\'"]'
+            . ' and [`\'"]test_related_models[`\'"]\.[`\'"]id[`\'"] = \?\)#',
+            $sql,
+            'Query does not match'
+        );
         static::assertEquals(['value'], $bindings, 'Bindings do not match');
     }
 
@@ -40,8 +45,13 @@ class RelationKeyStrategyTest extends TestCase
         $sql      = $query->toSql();
         $bindings = $query->getBindings();
 
-        static::assertRegExp('#\(select \* from [`\'"]test_related_models[`\'"] where [`\'"]test_models[`\'"].[`\'"]id[`\'"] = [`\'"]test_related_models[`\'"].[`\'"]test_model_id[`\'"] and [`\'"]id[`\'"] in\s*\(\?\,\s*\?\)#i', $sql, 'Query does not match');
+        static::assertRegExp(
+            '#\(select \* from [`\'"]test_related_models[`\'"] '
+            . 'where [`\'"]test_models[`\'"]\.[`\'"]id[`\'"] = [`\'"]test_related_models[`\'"]\.[`\'"]test_model_id[`\'"] '
+            . 'and [`\'"]test_related_models[`\'"]\.[`\'"]id[`\'"] in\s*\(\?\,\s*\?\)#i',
+            $sql,
+            'Query does not match'
+        );
         static::assertEquals(['value', 'another'], $bindings, 'Bindings do not match');
     }
-
 }
