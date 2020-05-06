@@ -47,7 +47,7 @@ class RelationKeyStrategy extends AbstractFilterStrategy
         /** @var Relation $instance */
         $instance = $query->getModel()->{$relation}();
 
-        return $instance->getModel()->getKeyName();
+        return $instance->getModel()->getQualifiedKeyName();
     }
 
     /**
